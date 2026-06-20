@@ -11,4 +11,4 @@ update_and_report.sh
 510300.csv
 600881.csv
 *.csv
-screener.html
+/screener.html

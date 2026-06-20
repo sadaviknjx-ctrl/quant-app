@@ -26,6 +26,10 @@ jobs:
       - name: Update data and generate report
         run: python scripts/generate_report.py
 
+      - name: Generate stock screener
+        run: python scripts/stock_screener.py
+        timeout-minutes: 15
+
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
