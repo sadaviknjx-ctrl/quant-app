@@ -1,0 +1,534 @@
+import pandas as pd
+import numpy as np
+from datetime import datetime
+import akshare as ak
+import time
+import os
+
+ROOT   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA   = os.path.join(ROOT, 'data')
+DOCS   = os.path.join(ROOT, 'docs')
+os.makedirs(DOCS, exist_ok=True)
+
+STOCKS = {
+    '三峡新材': {'code': '600293', 'symbol': 'sh600293', 'hold': 1600, 'cost': 3.748},
+    '京东方A':  {'code': '000725', 'symbol': 'sz000725', 'hold': 300,  'cost': 4.892},
+    '华远控股': {'code': '600743', 'symbol': 'sh600743', 'hold': 300,  'cost': -2.722},
+}
+
+def update_data():
+    print('更新行情数据...')
+    for name, cfg in STOCKS.items():
+        for attempt in range(3):
+            try:
+                df = ak.stock_zh_a_daily(
+                    symbol=cfg['symbol'],
+                    start_date='20240101',
+                    end_date=datetime.now().strftime('%Y%m%d'),
+                    adjust='qfq'
+                )
+                df.to_csv(os.path.join(DATA, f"{cfg['code']}.csv"), index=False)
+                print(f"  {name}: {df['close'].iloc[-1]} ({df['date'].iloc[-1]})")
+                time.sleep(1)
+                break
+            except Exception as e:
+                print(f"  {name} 第{attempt+1}次失败: {e}")
+                time.sleep(3)
+
+def calc_signals(cfg):
+    df = pd.read_csv(os.path.join(DATA, f"{cfg['code']}.csv"))
+    df['date']  = pd.to_datetime(df['date'])
+    df = df.sort_values('date').reset_index(drop=True)
+
+    close = df['close'].astype(float)
+    high  = df['high'].astype(float)
+    low   = df['low'].astype(float)
+    vol   = df['volume'].astype(float)
+
+    ma5  = close.rolling(5).mean()
+    ma10 = close.rolling(10).mean()
+    ma20 = close.rolling(20).mean()
+    std20   = close.rolling(20).std()
+    boll_up = (ma20 + 2 * std20).iloc[-1]
+    boll_dn = (ma20 - 2 * std20).iloc[-1]
+
+    last_close = float(close.iloc[-1])
+    prev_high  = float(high.iloc[-1])
+    prev_low   = float(low.iloc[-1])
+    last_vol   = float(vol.iloc[-1])
+    avg_vol10  = float(vol.tail(10).mean())
+    avg_vol20  = float(vol.tail(20).mean())
+    avg_vol5   = float(vol.tail(5).mean())
+    vol_ratio  = last_vol / avg_vol10 if avg_vol10 > 0 else 1
+
+    ma5_v  = ma5.iloc[-1]
+    ma10_v = ma10.iloc[-1]
+    ma20_v = ma20.iloc[-1]
+
+    t_sell   = round(prev_high * 1.01, 2)
+    t_buy    = round(prev_low  * 0.99, 2)
+    stop     = round(min(last_close * 0.97, t_buy * 0.99), 2)
+    t_shares = max(round(cfg['hold'] * 0.2 / 100) * 100, 100)
+
+    cost = cfg['cost']
+    if cost <= 0:
+        profit_pct   = None
+        profit_label = f'+{last_close - cost:.3f}元/股（成本已为负）'
+        profit_pos   = True
+    else:
+        profit_pct   = (last_close - cost) / cost * 100
+        profit_label = f'{profit_pct:+.1f}%'
+        profit_pos   = profit_pct >= 0
+
+    trend_val = ma5_v - ma10_v
+    if last_close > ma5_v > ma10_v:
+        trend, trend_cls = '↑ 短期上升', 'up'
+    elif last_close < ma5_v < ma10_v:
+        trend, trend_cls = '↓ 短期下降', 'down'
+    else:
+        trend, trend_cls = '→ 横盘震荡', 'flat'
+
+    vol_desc = f'放量 {vol_ratio:.1f}x' if vol_ratio > 1.5 else ('缩量' if vol_ratio < 0.7 else f'正常 {vol_ratio:.1f}x')
+
+    warnings = []
+    below_ma20 = int((close.tail(5) < ma20.tail(5)).sum())
+    if below_ma20 >= 5:
+        warnings.append(('red', '连续5日低于MA20，趋势持续走弱，暂停做T'))
+    elif below_ma20 >= 3:
+        warnings.append(('orange', f'近5日有{below_ma20}天低于MA20，谨慎操作'))
+
+    if cost > 0 and profit_pct is not None:
+        if profit_pct < -10:
+            warnings.append(('red', f'浮亏已达{profit_pct:.1f}%，建议考虑止损换股'))
+        elif profit_pct < -5:
+            warnings.append(('orange', f'浮亏{profit_pct:.1f}%，关注止损线'))
+
+    if avg_vol20 > 0 and avg_vol5 / avg_vol20 < 0.5:
+        warnings.append(('orange', '成交量持续萎缩，流动性不足，做T空间有限'))
+
+    if t_sell - t_buy < last_close * 0.02:
+        warnings.append(('yellow', '高抛低吸价差不足2%，手续费后盈利空间有限'))
+
+    if last_close < boll_dn:
+        advice = ('warning', '超卖区域，优先低吸，暂缓高抛')
+    elif last_close > boll_up:
+        advice = ('warning', '超买区域，优先高抛，谨慎追涨')
+    elif vol_ratio > 1.5 and last_close > ma5_v:
+        advice = ('good', '放量上涨，趋势偏强，以高抛为主')
+    elif vol_ratio < 0.7:
+        advice = ('neutral', '缩量横盘，今日可不操作，等待放量信号')
+    else:
+        advice = ('neutral', '正常震荡，按挂单价位操作即可')
+
+    return {
+        'last_close': last_close, 'cost': cost,
+        'profit_label': profit_label, 'profit_pct': profit_pct, 'profit_pos': profit_pos,
+        'trend': trend, 'trend_cls': trend_cls,
+        'vol_desc': vol_desc, 'vol_ratio': vol_ratio,
+        'ma5': ma5_v, 'ma10': ma10_v, 'ma20': ma20_v,
+        'boll_up': boll_up, 'boll_dn': boll_dn,
+        't_sell': t_sell, 't_buy': t_buy, 'stop': stop,
+        't_shares': t_shares, 'advice': advice,
+        'hold': cfg['hold'], 'code': cfg['code'],
+        'warnings': warnings,
+    }
+
+def stock_card(name, s):
+    profit_cls = 'positive' if s['profit_pos'] else 'negative'
+    trend_cls  = s['trend_cls']
+
+    warn_html = ''
+    for level, msg in s['warnings']:
+        warn_html += f'<div class="warn warn-{level}">{msg}</div>'
+
+    return f"""<div class="card stock-card">
+  <div class="card-top">
+    <div class="stock-id">
+      <span class="stock-name">{name}</span>
+      <span class="stock-code">{s['code']}</span>
+    </div>
+    <div class="price-block">
+      <span class="last-price">{s['last_close']:.2f}</span>
+      <span class="profit {profit_cls}">{s['profit_label']}</span>
+    </div>
+  </div>
+
+  {warn_html}
+
+  <div class="meta-row">
+    <span class="trend trend-{trend_cls}">{s['trend']}</span>
+    <span class="pill">{s['vol_desc']}</span>
+    <span class="pill">持仓 {s['hold']}股</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="ind-grid">
+    <div class="ind"><span class="ind-l">MA5</span><span class="ind-v">{s['ma5']:.2f}</span></div>
+    <div class="ind"><span class="ind-l">MA10</span><span class="ind-v">{s['ma10']:.2f}</span></div>
+    <div class="ind"><span class="ind-l">MA20</span><span class="ind-v">{s['ma20']:.2f}</span></div>
+    <div class="ind"><span class="ind-l">布林上</span><span class="ind-v">{s['boll_up']:.2f}</span></div>
+    <div class="ind"><span class="ind-l">布林下</span><span class="ind-v">{s['boll_dn']:.2f}</span></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <p class="t-label-row">明日挂单建议 <span class="shares-badge">{s['t_shares']}股</span></p>
+  <div class="t-grid">
+    <div class="t-cell t-sell">
+      <div class="t-cell-label">高抛（卖出）</div>
+      <div class="t-cell-price">{s['t_sell']:.2f}</div>
+    </div>
+    <div class="t-cell t-buy">
+      <div class="t-cell-label">低吸（买回）</div>
+      <div class="t-cell-price">{s['t_buy']:.2f}</div>
+    </div>
+    <div class="t-cell t-stop">
+      <div class="t-cell-label">止损（减仓）</div>
+      <div class="t-cell-price">{s['stop']:.2f}</div>
+    </div>
+  </div>
+
+  <div class="advice advice-{s['advice'][0]}">{s['advice'][1]}</div>
+</div>"""
+
+CSS = """
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f0f2f5;font-family:-apple-system,'PingFang SC',sans-serif;padding:16px;max-width:500px;margin:0 auto;color:#1a1d23}
+h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
+.sub{font-size:12px;color:#8a8f9b;margin-bottom:18px}
+
+/* ── Cards ── */
+.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid #e8eaed}
+.section-title{font-size:13px;font-weight:600;color:#5a6072;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px}
+
+/* ── Stock card top ── */
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.stock-name{font-size:16px;font-weight:600;color:#1a1d23}
+.stock-code{font-size:11px;color:#b0b5c0;margin-left:5px}
+.price-block{text-align:right}
+.last-price{display:block;font-size:24px;font-weight:700;color:#1a1d23;letter-spacing:-.5px}
+.profit{font-size:12px;font-weight:500}
+.profit.positive{color:#00a854}
+.profit.negative{color:#f5222d}
+
+/* ── Warnings ── */
+.warn{font-size:12px;padding:7px 10px;border-radius:8px;margin-bottom:8px;font-weight:500}
+.warn-red{background:#fff1f0;color:#cf1322;border-left:3px solid #f5222d}
+.warn-orange{background:#fff7e6;color:#874d00;border-left:3px solid #fa8c16}
+.warn-yellow{background:#feffe6;color:#7c6500;border-left:3px solid #fadb14}
+
+/* ── Meta row ── */
+.meta-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.trend{font-size:12px;font-weight:600;padding:3px 8px;border-radius:6px}
+.trend-up{color:#f5222d;background:#fff1f0}
+.trend-down{color:#00a854;background:#f6ffed}
+.trend-flat{color:#5a6072;background:#f5f6f8}
+.pill{background:#f5f6f8;border:1px solid #e8eaed;border-radius:6px;padding:3px 8px;font-size:11px;color:#6b7280}
+
+/* ── Divider ── */
+.divider{height:1px;background:#f0f2f5;margin:12px 0}
+
+/* ── Indicator grid ── */
+.ind-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px}
+.ind{background:#f8f9fb;border-radius:8px;padding:7px 4px;text-align:center}
+.ind-l{display:block;font-size:10px;color:#9ca3af;margin-bottom:3px}
+.ind-v{font-size:13px;font-weight:600;color:#1a1d23}
+
+/* ── T grid ── */
+.t-label-row{font-size:12px;color:#9ca3af;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.shares-badge{background:#e8f4ff;color:#0958d9;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:500}
+.t-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.t-cell{border-radius:10px;padding:10px 6px;text-align:center}
+.t-sell{background:#fff1f0;border:1px solid #ffa39e}
+.t-buy{background:#f6ffed;border:1px solid #b7eb8f}
+.t-stop{background:#fffbe6;border:1px solid #ffe58f}
+.t-cell-label{font-size:10px;color:#8a8f9b;margin-bottom:5px}
+.t-cell-price{font-size:18px;font-weight:700}
+.t-sell .t-cell-price{color:#f5222d}
+.t-buy .t-cell-price{color:#389e0d}
+.t-stop .t-cell-price{color:#d46b08}
+
+/* ── Advice ── */
+.advice{font-size:13px;padding:9px 12px;border-radius:8px;border-left:3px solid transparent}
+.advice-neutral{background:#f5f6f8;color:#5a6072;border-left-color:#c4c9d4}
+.advice-good{background:#f6ffed;color:#389e0d;border-left-color:#52c41a}
+.advice-warning{background:#fff7e6;color:#874d00;border-left-color:#fa8c16}
+
+/* ── Flow steps ── */
+.step{display:flex;gap:12px;margin-bottom:14px;align-items:flex-start}
+.step:last-child{margin-bottom:0}
+.step-num{width:24px;height:24px;border-radius:50%;background:#e8f4ff;color:#0958d9;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.step-body{}
+.step-title{font-size:13px;font-weight:600;color:#1a1d23;margin-bottom:3px}
+.step-desc{font-size:12px;color:#8a8f9b;line-height:1.6}
+.time-pill{background:#e8f4ff;color:#0958d9;border-radius:4px;padding:1px 6px;font-size:11px;margin-right:4px}
+
+/* ── Checklist ── */
+.checklist{list-style:none}
+.checklist li{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f0f2f5;font-size:13px;color:#5a6072}
+.checklist li:last-child{border-bottom:none}
+.chk{width:17px;height:17px;border:1.5px solid #d1d5db;border-radius:4px;flex-shrink:0}
+
+/* ── Risk list ── */
+.risk-list{display:flex;flex-direction:column;gap:8px}
+.risk-item{display:flex;gap:8px;font-size:12px;color:#6b7280;align-items:flex-start;line-height:1.6}
+.risk-dot{color:#f5222d;margin-top:2px;flex-shrink:0}
+
+/* ── Trade stats ── */
+.stat-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:4px}
+.stat-item{background:#f8f9fb;border-radius:10px;padding:10px 6px;text-align:center}
+.stat-num{display:block;font-size:20px;font-weight:700;color:#1a1d23;letter-spacing:-.3px}
+.stat-label{font-size:11px;color:#9ca3af;margin-top:2px;display:block}
+.t-stat-header{display:grid;grid-template-columns:2fr 1fr 1fr 1.5fr;gap:4px;padding:4px 0;font-size:11px;color:#9ca3af;font-weight:500}
+.t-stat-row{display:grid;grid-template-columns:2fr 1fr 1fr 1.5fr;gap:4px;padding:7px 0;border-bottom:1px solid #f0f2f5;font-size:12px}
+.t-stat-row:last-child{border-bottom:none}
+.t-stat-name{color:#1a1d23;font-weight:500}
+.t-stat-val{color:#5a6072;text-align:right}
+.trade-row{display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #f0f2f5;font-size:12px}
+.trade-row:last-child{border-bottom:none}
+.trade-date{color:#9ca3af;width:36px;flex-shrink:0}
+.trade-stock{color:#1a1d23;font-weight:500;flex:1}
+.trade-action{width:36px;font-weight:600;flex-shrink:0}
+.trade-sell{color:#f5222d}
+.trade-buy{color:#00a854}
+.trade-detail{color:#8a8f9b;margin-left:auto}
+
+/* ── Screener btn ── */
+.screener-btn{display:block;text-align:center;padding:13px;background:#1677ff;color:#fff;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;margin-bottom:14px;letter-spacing:.02em}
+
+.footer{text-align:center;font-size:11px;color:#b0b5c0;padding-bottom:24px}
+"""
+
+TRADES_CSV = os.path.join(DATA, 'trades.csv')
+
+def load_trades():
+    if not os.path.exists(TRADES_CSV):
+        return pd.DataFrame(columns=['date','stock','action','shares','price','note'])
+    df = pd.read_csv(TRADES_CSV)
+    df['date'] = pd.to_datetime(df['date'])
+    df['shares'] = pd.to_numeric(df['shares'], errors='coerce')
+    df['price']  = pd.to_numeric(df['price'],  errors='coerce')
+    return df.dropna(subset=['shares','price'])
+
+def calc_trade_stats(trades):
+    if trades.empty:
+        return None
+
+    # 配对高抛/低吸：按日期+股票匹配，每对算一次T
+    stats_by_stock = {}
+    for stock, grp in trades.groupby('stock'):
+        sells = grp[grp['action'] == '高抛'].sort_values('date').reset_index(drop=True)
+        buys  = grp[grp['action'] == '低吸'].sort_values('date').reset_index(drop=True)
+        pairs = min(len(sells), len(buys))
+        profit = 0.0
+        win = 0
+        for i in range(pairs):
+            sell_p = sells.iloc[i]['price']
+            buy_p  = buys.iloc[i]['price']
+            sh     = min(sells.iloc[i]['shares'], buys.iloc[i]['shares'])
+            p = (sell_p - buy_p) * sh - (sell_p * sh + buy_p * sh) * 0.0003  # 手续费估算
+            profit += p
+            if p > 0:
+                win += 1
+        stats_by_stock[stock] = {'pairs': pairs, 'win': win, 'profit': round(profit, 2)}
+
+    total_pairs  = sum(v['pairs']  for v in stats_by_stock.values())
+    total_win    = sum(v['win']    for v in stats_by_stock.values())
+    total_profit = sum(v['profit'] for v in stats_by_stock.values())
+    win_rate = total_win / total_pairs * 100 if total_pairs > 0 else 0
+
+    # 最近7天记录
+    recent = trades[trades['date'] >= (pd.Timestamp.now() - pd.Timedelta(days=7))]
+
+    return {
+        'by_stock': stats_by_stock,
+        'total_pairs': total_pairs,
+        'total_win': total_win,
+        'win_rate': win_rate,
+        'total_profit': total_profit,
+        'recent': recent,
+        'last_date': trades['date'].max().strftime('%Y-%m-%d'),
+    }
+
+def trade_stats_html(stats):
+    if stats is None:
+        return ''
+
+    win_color  = '#00a854' if stats['win_rate'] >= 60 else ('#fa8c16' if stats['win_rate'] >= 40 else '#f5222d')
+    pnl_color  = '#00a854' if stats['total_profit'] >= 0 else '#f5222d'
+    pnl_sign   = '+' if stats['total_profit'] >= 0 else ''
+
+    # 按股票分行
+    stock_rows = ''
+    for stock, sv in stats['by_stock'].items():
+        if sv['pairs'] == 0:
+            continue
+        wr = sv['win'] / sv['pairs'] * 100
+        pc = sv['profit']
+        stock_rows += f"""<div class="t-stat-row">
+          <span class="t-stat-name">{stock}</span>
+          <span class="t-stat-val">{sv['pairs']}次</span>
+          <span class="t-stat-val" style="color:{'#00a854' if wr>=60 else '#fa8c16'}">{wr:.0f}%</span>
+          <span class="t-stat-val" style="color:{'#00a854' if pc>=0 else '#f5222d'}">{'+' if pc>=0 else ''}{pc:.2f}元</span>
+        </div>"""
+
+    # 最近记录
+    recent_rows = ''
+    for _, row in stats['recent'].sort_values('date', ascending=False).iterrows():
+        action_cls = 'sell' if row['action'] == '高抛' else 'buy'
+        recent_rows += f"""<div class="trade-row">
+          <span class="trade-date">{row['date'].strftime('%m/%d')}</span>
+          <span class="trade-stock">{row['stock']}</span>
+          <span class="trade-action trade-{action_cls}">{row['action']}</span>
+          <span class="trade-detail">{int(row['shares'])}股 @ {row['price']}</span>
+        </div>"""
+
+    if not recent_rows:
+        recent_rows = '<div style="text-align:center;color:#b0b5c0;font-size:12px;padding:10px">近7日暂无记录</div>'
+
+    return f"""<div class="card">
+  <p class="section-title">做T战绩</p>
+  <div class="stat-summary">
+    <div class="stat-item">
+      <span class="stat-num">{stats['total_pairs']}</span>
+      <span class="stat-label">总做T次数</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num" style="color:{win_color}">{stats['win_rate']:.0f}%</span>
+      <span class="stat-label">胜率</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num" style="color:{pnl_color}">{pnl_sign}{stats['total_profit']:.2f}</span>
+      <span class="stat-label">累计收益(元)</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="t-stat-header">
+    <span class="t-stat-name">股票</span>
+    <span class="t-stat-val">次数</span>
+    <span class="t-stat-val">胜率</span>
+    <span class="t-stat-val">盈亏</span>
+  </div>
+  {stock_rows if stock_rows else '<div style="text-align:center;color:#b0b5c0;font-size:12px;padding:10px">暂无完成的做T记录</div>'}
+
+  <div class="divider"></div>
+
+  <p class="section-title" style="margin-bottom:8px">近7日记录</p>
+  {recent_rows}
+
+  <div style="margin-top:12px;padding:10px;background:#f5f6f8;border-radius:8px;font-size:12px;color:#8a8f9b;line-height:1.8">
+    <strong style="color:#5a6072">如何记录交易</strong><br>
+    每次做T后，在终端运行：<br>
+    <code style="background:#e8eaed;padding:2px 6px;border-radius:4px;font-size:11px">python3.11 scripts/add_trade.py</code><br>
+    按提示输入股票、操作、数量、价格即可
+  </div>
+</div>"""
+
+def generate():
+    update_data()
+    now = datetime.now()
+    signals, errors = {}, {}
+    for name, cfg in STOCKS.items():
+        try:
+            signals[name] = calc_signals(cfg)
+        except Exception as e:
+            errors[name] = str(e)
+
+    trades     = load_trades()
+    trade_stat = calc_trade_stats(trades)
+
+    cards = ''
+    for name, cfg in STOCKS.items():
+        if name in signals:
+            cards += stock_card(name, signals[name])
+        else:
+            cards += f'<div class="card"><p style="color:#f5222d">{name} 加载失败: {errors[name]}</p></div>'
+
+    html = f"""<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>做T辅助信号 {now.strftime('%m-%d')}</title>
+<style>{CSS}</style>
+</head>
+<body>
+<h1>做T辅助信号</h1>
+<p class="sub">更新于 {now.strftime('%Y-%m-%d %H:%M')} &nbsp;·&nbsp; 工作日 15:45 自动刷新</p>
+
+{cards}
+
+<div class="card">
+  <p class="section-title">今日操作流程</p>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <p class="step-title"><span class="time-pill">15:45</span>页面自动更新</p>
+      <p class="step-desc">每个工作日收盘后自动拉取数据，刷新本页面即可查看当日信号</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <p class="step-title"><span class="time-pill">09:15</span>设同花顺条件单</p>
+      <p class="step-desc">打开同花顺 → 交易 → 条件单 → 新建<br>高抛价触发卖出，低吸价触发买入，各设一单</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <p class="step-title"><span class="time-pill">09:30</span>开盘观察30分钟</p>
+      <p class="step-desc">确认方向与信号一致；大盘跌超1.5%时撤低吸条件单</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <p class="step-title"><span class="time-pill">14:55</span>收盘前确认</p>
+      <p class="step-desc">确保当日T仓已平，不持有当天买入的仓位过夜</p>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <p class="section-title">今日操作清单</p>
+  <ul class="checklist">
+    <li><div class="chk"></div>页面已刷新，数据为最新交易日</li>
+    <li><div class="chk"></div>三峡新材条件单已挂好</li>
+    <li><div class="chk"></div>京东方A条件单已挂好</li>
+    <li><div class="chk"></div>华远控股条件单已挂好</li>
+    <li><div class="chk"></div>开盘30分钟已观察确认</li>
+    <li><div class="chk"></div>收盘前T仓已平</li>
+  </ul>
+</div>
+
+<div class="card">
+  <p class="section-title">风控规则</p>
+  <div class="risk-list">
+    <div class="risk-item"><span class="risk-dot">▸</span>每只股票做T仓位不超过持仓20%</div>
+    <div class="risk-item"><span class="risk-dot">▸</span>触发止损价时减仓，不补仓摊薄</div>
+    <div class="risk-item"><span class="risk-dot">▸</span>单日亏损超总资产1%，当天停止操作</div>
+    <div class="risk-item"><span class="risk-dot">▸</span>大盘跌幅超1.5%，撤销低吸条件单</div>
+    <div class="risk-item"><span class="risk-dot">▸</span>当天买入的T仓必须当天平掉，不过夜</div>
+    <div class="risk-item"><span class="risk-dot">▸</span>收到红色预警的股票当日暂停做T</div>
+  </div>
+</div>
+
+{trade_stats_html(trade_stat)}
+
+<a class="screener-btn" href="screener.html">查看今日选股推荐 →</a>
+
+<p class="footer">仅供参考，不构成投资建议 · 据此操作风险自负</p>
+</body>
+</html>"""
+
+    out = os.path.join(DOCS, 'index.html')
+    with open(out, 'w', encoding='utf-8') as f:
+        f.write(html)
+    print(f'报告已生成: {out}')
+
+if __name__ == '__main__':
+    generate()
