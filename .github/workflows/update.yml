@@ -1,0 +1,35 @@
+name: Update Quant Report
+
+on:
+  schedule:
+    - cron: '45 7 * * 1-5'   # Mon–Fri 15:45 Beijing (07:45 UTC)
+  workflow_dispatch:            # 允许手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Update data and generate report
+        run: python scripts/generate_report.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/ data/
+          git diff --staged --quiet || git commit -m "chore: update report $(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M')"
+          git push
