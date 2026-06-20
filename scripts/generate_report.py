@@ -294,6 +294,32 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 .trade-buy{color:#00a854}
 .trade-detail{color:#8a8f9b;margin-left:auto}
 
+/* ── Add trade button ── */
+.add-trade-btn{width:100%;margin-top:12px;padding:11px;background:#f0f7ff;color:#1677ff;border:1.5px dashed #91caff;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.02em}
+.add-trade-btn:active{background:#e6f0ff}
+
+/* ── Modal overlay ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:500px;animation:slideUp .25s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-title{font-size:16px;font-weight:600;color:#1a1d23;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
+.modal-close{background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer;line-height:1}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;color:#8a8f9b;margin-bottom:6px;display:block;font-weight:500}
+.seg-group{display:flex;gap:8px}
+.seg-btn{flex:1;padding:10px;border:1.5px solid #e8eaed;border-radius:10px;background:#f8f9fb;font-size:13px;font-weight:500;color:#5a6072;cursor:pointer;transition:all .15s}
+.seg-btn.active-sell{border-color:#f5222d;background:#fff1f0;color:#f5222d}
+.seg-btn.active-buy{border-color:#00a854;background:#f6ffed;color:#00a854}
+.seg-btn.active-stock{border-color:#1677ff;background:#e8f4ff;color:#1677ff}
+.form-input{width:100%;padding:11px 12px;border:1.5px solid #e8eaed;border-radius:10px;font-size:15px;color:#1a1d23;background:#f8f9fb;outline:none;-webkit-appearance:none}
+.form-input:focus{border-color:#1677ff;background:#fff}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.submit-btn{width:100%;padding:14px;background:#1677ff;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;margin-top:6px}
+.submit-btn:disabled{background:#b0c4de;cursor:not-allowed}
+.token-hint{font-size:11px;color:#b0b5c0;text-align:center;margin-top:10px;line-height:1.6}
+.toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:200;display:none;white-space:nowrap}
+
 /* ── Screener btn ── */
 .screener-btn{display:block;text-align:center;padding:13px;background:#1677ff;color:#fff;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;margin-bottom:14px;letter-spacing:.02em}
 
@@ -419,12 +445,7 @@ def trade_stats_html(stats):
   <p class="section-title" style="margin-bottom:8px">近7日记录</p>
   {recent_rows}
 
-  <div style="margin-top:12px;padding:10px;background:#f5f6f8;border-radius:8px;font-size:12px;color:#8a8f9b;line-height:1.8">
-    <strong style="color:#5a6072">如何记录交易</strong><br>
-    每次做T后，在终端运行：<br>
-    <code style="background:#e8eaed;padding:2px 6px;border-radius:4px;font-size:11px">python3.11 scripts/add_trade.py</code><br>
-    按提示输入股票、操作、数量、价格即可
-  </div>
+  <button class="add-trade-btn" onclick="openTradeModal()">＋ 记录一笔交易</button>
 </div>"""
 
 def generate():
@@ -522,6 +543,169 @@ def generate():
 <a class="screener-btn" href="screener.html">查看今日选股推荐 →</a>
 
 <p class="footer">仅供参考，不构成投资建议 · 据此操作风险自负</p>
+
+<!-- 交易录入弹窗 -->
+<div class="modal-overlay" id="tradeModal" onclick="closeOnBackdrop(event)">
+  <div class="modal">
+    <div class="modal-title">
+      记录一笔交易
+      <button class="modal-close" onclick="closeTradeModal()">×</button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">股票</label>
+      <div class="seg-group" id="stockSeg">
+        <button class="seg-btn" onclick="selectStock(this,'三峡新材')">三峡新材</button>
+        <button class="seg-btn" onclick="selectStock(this,'京东方A')">京东方A</button>
+        <button class="seg-btn" onclick="selectStock(this,'华远控股')">华远控股</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">操作</label>
+      <div class="seg-group" id="actionSeg">
+        <button class="seg-btn" onclick="selectAction(this,'高抛')">高抛（卖出）</button>
+        <button class="seg-btn" onclick="selectAction(this,'低吸')">低吸（买入）</button>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">数量（股）</label>
+        <input class="form-input" id="shares" type="number" placeholder="100" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label class="form-label">成交价格（元）</label>
+        <input class="form-input" id="price" type="number" placeholder="3.85" inputmode="decimal" step="0.01">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">备注（选填）</label>
+      <input class="form-input" id="note" type="text" placeholder="如：止损单触发">
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitTrade()">提交记录</button>
+    <p class="token-hint" id="tokenHint"></p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const REPO  = 'sadaviknjx-ctrl/quant-app';
+const BRANCH = 'main';
+const FILE   = 'data/trades.csv';
+const WORKFLOW = 'update.yml';
+
+let selStock  = '';
+let selAction = '';
+
+function openTradeModal() {{
+  document.getElementById('tradeModal').classList.add('open');
+  const tk = localStorage.getItem('gh_token');
+  document.getElementById('tokenHint').textContent = tk
+    ? '已保存 GitHub Token ✓'
+    : '首次使用会提示输入 GitHub Token（只输入一次）';
+}}
+function closeTradeModal() {{
+  document.getElementById('tradeModal').classList.remove('open');
+}}
+function closeOnBackdrop(e) {{
+  if (e.target === document.getElementById('tradeModal')) closeTradeModal();
+}}
+
+function selectStock(btn, val) {{
+  selStock = val;
+  document.querySelectorAll('#stockSeg .seg-btn').forEach(b => b.classList.remove('active-stock'));
+  btn.classList.add('active-stock');
+}}
+function selectAction(btn, val) {{
+  selAction = val;
+  document.querySelectorAll('#actionSeg .seg-btn').forEach(b => {{
+    b.classList.remove('active-sell','active-buy');
+  }});
+  btn.classList.add(val === '高抛' ? 'active-sell' : 'active-buy');
+}}
+
+function showToast(msg, ms=2500) {{
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display='none', ms);
+}}
+
+async function submitTrade() {{
+  if (!selStock)  {{ showToast('请选择股票'); return; }}
+  if (!selAction) {{ showToast('请选择操作'); return; }}
+  const shares = document.getElementById('shares').value.trim();
+  const price  = document.getElementById('price').value.trim();
+  if (!shares || isNaN(shares) || +shares <= 0) {{ showToast('请输入有效数量'); return; }}
+  if (!price  || isNaN(price)  || +price  <= 0) {{ showToast('请输入有效价格'); return; }}
+  const note = document.getElementById('note').value.trim();
+
+  let token = localStorage.getItem('gh_token');
+  if (!token) {{
+    token = prompt('请输入 GitHub Personal Access Token（需要 repo 权限，只需输入一次）：');
+    if (!token) return;
+    localStorage.setItem('gh_token', token.trim());
+    token = token.trim();
+  }}
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '提交中...';
+
+  try {{
+    // 1. 读取现有 CSV
+    const getRes = await fetch(`https://api.github.com/repos/${{REPO}}/contents/${{FILE}}?ref=${{BRANCH}}`, {{
+      headers: {{ Authorization: `token ${{token}}`, Accept: 'application/vnd.github.v3+json' }}
+    }});
+    if (!getRes.ok) throw new Error('读取文件失败，请检查 Token 权限');
+    const fileData = await getRes.json();
+    const oldContent = atob(fileData.content.replace(/\\n/g,''));
+
+    // 2. 追加新行
+    const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD
+    const newLine = `${{today}},${{selStock}},${{selAction}},${{shares}},${{price}},${{note}}\\n`;
+    const newContent = btoa(unescape(encodeURIComponent(oldContent + newLine)));
+
+    // 3. 写回 GitHub
+    const putRes = await fetch(`https://api.github.com/repos/${{REPO}}/contents/${{FILE}}`, {{
+      method: 'PUT',
+      headers: {{ Authorization: `token ${{token}}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        message: `trade: ${{selStock}} ${{selAction}} ${{shares}}股@${{price}}`,
+        content: newContent,
+        sha: fileData.sha,
+        branch: BRANCH
+      }})
+    }});
+    if (!putRes.ok) throw new Error('写入失败，请检查 Token 是否有 repo 写权限');
+
+    // 4. 触发 Actions 重新生成报告
+    await fetch(`https://api.github.com/repos/${{REPO}}/actions/workflows/${{WORKFLOW}}/dispatches`, {{
+      method: 'POST',
+      headers: {{ Authorization: `token ${{token}}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ ref: BRANCH }})
+    }});
+
+    showToast('✓ 记录成功！约2分钟后刷新页面查看战绩', 3500);
+    closeTradeModal();
+
+    // 清空表单
+    selStock = selAction = '';
+    document.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active-stock','active-sell','active-buy'));
+    ['shares','price','note'].forEach(id => document.getElementById(id).value = '');
+
+  }} catch(err) {{
+    showToast('❌ ' + err.message, 4000);
+  }} finally {{
+    btn.disabled = false;
+    btn.textContent = '提交记录';
+  }}
+}}
+</script>
 </body>
 </html>"""
 
