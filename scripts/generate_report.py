@@ -379,7 +379,14 @@ def calc_trade_stats(trades):
 
 def trade_stats_html(stats):
     if stats is None:
-        return ''
+        return """<div class="card">
+  <p class="section-title">做T战绩</p>
+  <div style="text-align:center;padding:20px 0;color:#b0b5c0;font-size:13px;line-height:2">
+    暂无交易记录<br>
+    <span style="font-size:12px">完成第一笔做T后，点下方按钮录入</span>
+  </div>
+  <button class="add-trade-btn" onclick="openTradeModal()">＋ 记录一笔交易</button>
+</div>"""
 
     win_color  = '#00a854' if stats['win_rate'] >= 60 else ('#fa8c16' if stats['win_rate'] >= 40 else '#f5222d')
     pnl_color  = '#00a854' if stats['total_profit'] >= 0 else '#f5222d'
