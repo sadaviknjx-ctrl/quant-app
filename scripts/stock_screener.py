@@ -12,7 +12,6 @@ os.makedirs(DOCS, exist_ok=True)
 # 筛选条件
 MIN_PRICE    = 3.0    # 最低股价（元）
 MAX_PRICE    = 20.0   # 最高股价（1.1万能买500股以上）
-MIN_TURNOVER = 1.0    # 最低换手率（%）
 MIN_VOL_DAYS = 3      # 近N日波动率计算窗口
 VOLATILITY_MIN = 2.0  # 近20日日均波幅最低（%，太低没空间做T）
 VOLATILITY_MAX = 8.0  # 近20日日均波幅最高（%，太高风险大）
@@ -21,27 +20,26 @@ TOP_N = 15            # 最终推荐数量
 def screen():
     print('正在拉取全市场行情数据...')
     try:
-        spot = ak.stock_zh_a_spot_em()
+        spot = ak.stock_zh_a_spot()  # 新浪接口，东方财富接口在 GitHub Actions 上常连接失败
     except Exception as e:
         print(f'行情数据拉取失败: {e}')
         return []
 
     spot = spot.rename(columns={
-        '代码': 'code', '名称': 'name', '最新价': 'price',
-        '涨跌幅': 'change_pct', '换手率': 'turnover',
-        '成交额': 'amount', '市盈率-动态': 'pe',
+        '代码': 'symbol_raw', '名称': 'name', '最新价': 'price', '成交额': 'amount',
     })
 
-    # 基础过滤
-    df = spot[spot['price'].notna() & (spot['price'] > 0)].copy()
-    df['price']    = pd.to_numeric(df['price'],    errors='coerce')
-    df['turnover'] = pd.to_numeric(df['turnover'], errors='coerce')
-    df['amount']   = pd.to_numeric(df['amount'],   errors='coerce')
+    # 仅保留沪深主板（排除北交所 bj 开头）
+    df = spot[spot['symbol_raw'].str.startswith(('sh', 'sz'), na=False)].copy()
+    df['code']   = df['symbol_raw'].str[2:]
+    df['price']  = pd.to_numeric(df['price'],  errors='coerce')
+    df['amount'] = pd.to_numeric(df['amount'], errors='coerce')
 
+    # 基础过滤（新浪接口无换手率字段，改用成交额衡量流动性）
     df = df[
+        df['price'].notna() & (df['price'] > 0) &
         (df['price'] >= MIN_PRICE) &
         (df['price'] <= MAX_PRICE) &
-        (df['turnover'] >= MIN_TURNOVER) &
         (~df['name'].str.contains('ST|退', na=False)) &
         (df['amount'] >= 5e7)   # 成交额5000万以上
     ].copy()
@@ -53,13 +51,11 @@ def screen():
     start_date = (datetime.now() - timedelta(days=40)).strftime('%Y%m%d')
 
     for i, row in df.iterrows():
-        code   = str(row['code']).zfill(6)
+        code   = row['code']
         name   = row['name']
         price  = row['price']
-        turnover = row['turnover']
-
-        prefix = 'sh' if code.startswith('6') else 'sz'
-        symbol = f'{prefix}{code}'
+        amount = row['amount']
+        symbol = row['symbol_raw']
 
         try:
             hist = ak.stock_zh_a_daily(symbol=symbol, start_date=start_date,
@@ -98,7 +94,7 @@ def screen():
 
             results.append({
                 'code': code, 'name': name, 'price': price,
-                'turnover': turnover, 'avg_range': round(avg_range, 2),
+                'amount_wan': round(amount / 1e4), 'avg_range': round(avg_range, 2),
                 'ma5': round(ma5, 2), 'ma10': round(ma10, 2), 'ma20': round(ma20, 2),
                 'vol_ratio': round(vol_ratio, 2), 'score': score,
                 'trend': '↑' if ma5 > ma10 else ('↓' if ma5 < ma10 else '→'),
@@ -125,7 +121,7 @@ def build_html(results):
               <td><span class="sname">{r['name']}</span><br><span class="scode">{r['code']}</span></td>
               <td style="font-weight:700">{r['price']}</td>
               <td style="color:{trend_color}">{r['trend']} {r['ma5']}</td>
-              <td>{r['turnover']}%</td>
+              <td>{r['amount_wan']}万</td>
               <td>{r['avg_range']}%</td>
               <td>{r['vol_ratio']}x</td>
               <td style="color:{score_color};font-weight:700">{r['score']}</td>
@@ -165,8 +161,7 @@ def build_html(results):
 <div class="criteria">
   <div class="criteria-title">筛选标准</div>
   <div class="crit-item">▸ 股价 {MIN_PRICE}–{MAX_PRICE} 元（1.1万可买足量）</div>
-  <div class="crit-item">▸ 换手率 ≥ {MIN_TURNOVER}%（流动性充足）</div>
-  <div class="crit-item">▸ 成交额 ≥ 5000万（避免小票）</div>
+  <div class="crit-item">▸ 成交额 ≥ 5000万（避免小票，流动性充足）</div>
   <div class="crit-item">▸ 近20日日均波幅 {VOLATILITY_MIN}%–{VOLATILITY_MAX}%（做T空间合适）</div>
   <div class="crit-item">▸ 非ST / 非退市股</div>
 </div>
@@ -175,7 +170,7 @@ def build_html(results):
   <table>
     <thead>
       <tr>
-        <th>股票</th><th>现价</th><th>趋势/MA5</th><th>换手率</th><th>日均波幅</th><th>量比</th><th>评分</th>
+        <th>股票</th><th>现价</th><th>趋势/MA5</th><th>成交额</th><th>日均波幅</th><th>量比</th><th>评分</th>
       </tr>
     </thead>
     <tbody>{rows}</tbody>
