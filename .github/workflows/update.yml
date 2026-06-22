@@ -28,7 +28,7 @@ jobs:
 
       - name: Generate stock screener
         run: python scripts/stock_screener.py
-        timeout-minutes: 15
+        timeout-minutes: 12
 
       - name: Commit and push
         run: |

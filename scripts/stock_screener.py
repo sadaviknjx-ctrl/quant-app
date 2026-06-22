@@ -2,8 +2,8 @@ import akshare as ak
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
-import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCS = os.path.join(ROOT, 'docs')
@@ -16,6 +16,8 @@ MIN_VOL_DAYS = 3      # 近N日波动率计算窗口
 VOLATILITY_MIN = 2.0  # 近20日日均波幅最低（%，太低没空间做T）
 VOLATILITY_MAX = 8.0  # 近20日日均波幅最高（%，太高风险大）
 TOP_N = 15            # 最终推荐数量
+CANDIDATE_CAP = 400   # 按成交额取前N只做精细分析，控制运行时长
+MAX_WORKERS  = 12     # 并发拉取历史数据的线程数
 
 def screen():
     print('正在拉取全市场行情数据...')
@@ -44,13 +46,14 @@ def screen():
         (df['amount'] >= 5e7)   # 成交额5000万以上
     ].copy()
 
-    print(f'基础过滤后剩余: {len(df)} 只，开始计算波动率...')
+    # 按成交额取前N只，避免逐只拉取历史数据耗时过长
+    df = df.sort_values('amount', ascending=False).head(CANDIDATE_CAP)
+    print(f'基础过滤后剩余: {len(df)} 只，取成交额前{CANDIDATE_CAP}只精细分析...')
 
-    results = []
     end_date   = datetime.now().strftime('%Y%m%d')
     start_date = (datetime.now() - timedelta(days=40)).strftime('%Y%m%d')
 
-    for i, row in df.iterrows():
+    def analyze_one(row):
         code   = row['code']
         name   = row['name']
         price  = row['price']
@@ -61,7 +64,7 @@ def screen():
             hist = ak.stock_zh_a_daily(symbol=symbol, start_date=start_date,
                                         end_date=end_date, adjust='qfq')
             if len(hist) < 15:
-                continue
+                return None
 
             hist['close'] = hist['close'].astype(float)
             hist['high']  = hist['high'].astype(float)
@@ -73,7 +76,7 @@ def screen():
             avg_range = hist['range_pct'].tail(20).mean()
 
             if avg_range < VOLATILITY_MIN or avg_range > VOLATILITY_MAX:
-                continue
+                return None
 
             # 均线趋势：MA5 > MA10（短期向上）
             ma5  = hist['close'].rolling(5).mean().iloc[-1]
@@ -92,17 +95,25 @@ def screen():
             if 3 < avg_range < 6: score += 30  # 波幅最佳区间
             if 0.8 < vol_ratio < 2.0: score += 20
 
-            results.append({
+            return {
                 'code': code, 'name': name, 'price': price,
                 'amount_wan': round(amount / 1e4), 'avg_range': round(avg_range, 2),
                 'ma5': round(ma5, 2), 'ma10': round(ma10, 2), 'ma20': round(ma20, 2),
                 'vol_ratio': round(vol_ratio, 2), 'score': score,
                 'trend': '↑' if ma5 > ma10 else ('↓' if ma5 < ma10 else '→'),
-            })
-            time.sleep(0.3)
-
+            }
         except Exception:
-            continue
+            return None
+
+    results = []
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        futures = [pool.submit(analyze_one, row) for _, row in df.iterrows()]
+        for i, fut in enumerate(as_completed(futures), 1):
+            r = fut.result()
+            if r:
+                results.append(r)
+            if i % 50 == 0:
+                print(f'  已处理 {i}/{len(futures)}')
 
     results.sort(key=lambda x: x['score'], reverse=True)
     return results[:TOP_N]
