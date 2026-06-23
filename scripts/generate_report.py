@@ -708,22 +708,26 @@ async function submitTrade() {{
   btn.disabled = true;
   btn.textContent = '提交中...';
 
-  try {{
-    // 1. 读取现有 CSV
-    const getRes = await fetch(`https://api.github.com/repos/${{REPO}}/contents/${{FILE}}?ref=${{BRANCH}}`, {{
+  async function fetchSha() {{
+    const getRes = await fetch(`https://api.github.com/repos/${{REPO}}/contents/${{FILE}}?ref=${{BRANCH}}&_=${{Date.now()}}`, {{
+      cache: 'no-store',
       headers: {{ Authorization: `token ${{token}}`, Accept: 'application/vnd.github.v3+json' }}
     }});
-    if (!getRes.ok) throw new Error('读取文件失败，请检查 Token 权限');
-    const fileData = await getRes.json();
-    const oldContent = atob(fileData.content.replace(/\\n/g,''));
+    if (!getRes.ok) {{
+      const body = await getRes.json().catch(() => ({{}}));
+      throw new Error(`读取文件失败 (${{getRes.status}}): ${{body.message || '未知错误'}}`);
+    }}
+    return getRes.json();
+  }}
 
-    // 2. 追加新行
+  async function writeTrade() {{
+    const fileData = await fetchSha();
+    const oldContent = atob(fileData.content.replace(/\\n/g,''));
     const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD
     const newLine = `${{today}},${{selStock}},${{selAction}},${{shares}},${{price}},${{note}}\\n`;
     const newContent = btoa(unescape(encodeURIComponent(oldContent + newLine)));
 
-    // 3. 写回 GitHub
-    const putRes = await fetch(`https://api.github.com/repos/${{REPO}}/contents/${{FILE}}`, {{
+    return fetch(`https://api.github.com/repos/${{REPO}}/contents/${{FILE}}`, {{
       method: 'PUT',
       headers: {{ Authorization: `token ${{token}}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }},
       body: JSON.stringify({{
@@ -733,7 +737,21 @@ async function submitTrade() {{
         branch: BRANCH
       }})
     }});
-    if (!putRes.ok) throw new Error('写入失败，请检查 Token 是否有 repo 写权限');
+  }}
+
+  try {{
+    let putRes = await writeTrade();
+
+    // SHA 冲突（文件刚被其他提交更新）时自动重试一次
+    if (putRes.status === 409) {{
+      await new Promise(r => setTimeout(r, 800));
+      putRes = await writeTrade();
+    }}
+
+    if (!putRes.ok) {{
+      const body = await putRes.json().catch(() => ({{}}));
+      throw new Error(`写入失败 (${{putRes.status}}): ${{body.message || '未知错误'}}`);
+    }}
 
     // 4. 触发 Actions 重新生成报告
     await fetch(`https://api.github.com/repos/${{REPO}}/actions/workflows/${{WORKFLOW}}/dispatches`, {{
