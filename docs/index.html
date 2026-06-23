@@ -149,7 +149,7 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 <body>
 <h1>做T辅助信号</h1>
 <div class="sub-row">
-  <p class="sub">更新于 2026-06-23 09:28 &nbsp;·&nbsp; 工作日 17:30 自动刷新</p>
+  <p class="sub">更新于 2026-06-23 17:52 &nbsp;·&nbsp; 工作日 17:30 自动刷新</p>
   <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">🔄 立即刷新</button>
 </div>
 
@@ -441,13 +441,13 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
   <p class="section-title" style="margin-bottom:8px">近7日记录</p>
   <div class="trade-row">
           <span class="trade-date">06/23</span>
-          <span class="trade-stock">Ã¤Â¸ÂÃ¥Â³Â¡Ã¦ÂÂ°Ã¦ÂÂ</span>
-          <span class="trade-action trade-buy">Ã©Â«ÂÃ¦ÂÂ</span>
+          <span class="trade-stock">三峡新材</span>
+          <span class="trade-action trade-sell">高抛</span>
           <span class="trade-detail">600股 @ 3.85</span>
         </div><div class="trade-row">
           <span class="trade-date">06/23</span>
-          <span class="trade-stock">äº¬ä¸æ¹A</span>
-          <span class="trade-action trade-buy">ä½å¸</span>
+          <span class="trade-stock">京东方A</span>
+          <span class="trade-action trade-buy">低吸</span>
           <span class="trade-detail">400股 @ 6.61</span>
         </div><div class="trade-row">
           <span class="trade-date">06/23</span>
@@ -456,8 +456,8 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
           <span class="trade-detail">200股 @ 2.43</span>
         </div><div class="trade-row">
           <span class="trade-date">06/22</span>
-          <span class="trade-stock">ÃÂ¤ÃÂºÃÂ¬ÃÂ¤ÃÂ¸ÃÂÃÂ¦ÃÂÃÂ¹A</span>
-          <span class="trade-action trade-buy">ÃÂ¤ÃÂ½ÃÂÃÂ¥ÃÂÃÂ¸</span>
+          <span class="trade-stock">京东方A</span>
+          <span class="trade-action trade-buy">低吸</span>
           <span class="trade-detail">100股 @ 6.88</span>
         </div>
 
@@ -620,10 +620,12 @@ async function submitTrade() {
 
   async function writeTrade() {
     const fileData = await fetchSha();
-    const oldContent = atob(fileData.content.replace(/\n/g,''));
+    // oldBytes 是原始 UTF-8 字节串（每个字符=1字节），不能再用 encodeURIComponent 处理，否则会被二次编码导致中文乱码
+    const oldBytes = atob(fileData.content.replace(/\n/g,''));
     const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD
     const newLine = `${today},${selStock},${selAction},${shares},${price},${note}\n`;
-    const newContent = btoa(unescape(encodeURIComponent(oldContent + newLine)));
+    const newLineBytes = unescape(encodeURIComponent(newLine)); // 仅对新增这一行做 UTF-8 字节转换
+    const newContent = btoa(oldBytes + newLineBytes);
 
     return fetch(`https://api.github.com/repos/${REPO}/contents/${FILE}`, {
       method: 'PUT',

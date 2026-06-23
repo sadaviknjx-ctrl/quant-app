@@ -723,10 +723,12 @@ async function submitTrade() {{
 
   async function writeTrade() {{
     const fileData = await fetchSha();
-    const oldContent = atob(fileData.content.replace(/\\n/g,''));
+    // oldBytes 是原始 UTF-8 字节串（每个字符=1字节），不能再用 encodeURIComponent 处理，否则会被二次编码导致中文乱码
+    const oldBytes = atob(fileData.content.replace(/\\n/g,''));
     const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD
     const newLine = `${{today}},${{selStock}},${{selAction}},${{shares}},${{price}},${{note}}\\n`;
-    const newContent = btoa(unescape(encodeURIComponent(oldContent + newLine)));
+    const newLineBytes = unescape(encodeURIComponent(newLine)); // 仅对新增这一行做 UTF-8 字节转换
+    const newContent = btoa(oldBytes + newLineBytes);
 
     return fetch(`https://api.github.com/repos/${{REPO}}/contents/${{FILE}}`, {{
       method: 'PUT',
