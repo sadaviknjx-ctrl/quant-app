@@ -196,7 +196,11 @@ CSS = """
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#f0f2f5;font-family:-apple-system,'PingFang SC',sans-serif;padding:16px;max-width:500px;margin:0 auto;color:#1a1d23}
 h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
-.sub{font-size:12px;color:#8a8f9b;margin-bottom:18px}
+.sub-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:8px}
+.sub{font-size:12px;color:#8a8f9b}
+.refresh-btn{flex-shrink:0;padding:5px 10px;background:#fff;border:1px solid #e8eaed;border-radius:8px;font-size:11px;color:#5a6072;cursor:pointer;white-space:nowrap}
+.refresh-btn:active{background:#f0f2f5}
+.refresh-btn:disabled{opacity:.5}
 
 /* ── Cards ── */
 .card{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid #e8eaed}
@@ -485,7 +489,10 @@ def generate():
 </head>
 <body>
 <h1>做T辅助信号</h1>
-<p class="sub">更新于 {now.strftime('%Y-%m-%d %H:%M')} &nbsp;·&nbsp; 工作日 15:45 自动刷新</p>
+<div class="sub-row">
+  <p class="sub">更新于 {now.strftime('%Y-%m-%d %H:%M')} &nbsp;·&nbsp; 工作日 15:45 自动刷新</p>
+  <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">🔄 立即刷新</button>
+</div>
 
 {cards}
 
@@ -607,6 +614,34 @@ const WORKFLOW = 'update.yml';
 
 let selStock  = '';
 let selAction = '';
+
+async function manualRefresh() {{
+  let token = localStorage.getItem('gh_token');
+  if (!token) {{
+    token = prompt('请输入 GitHub Personal Access Token（需要 repo 权限，只需输入一次）：');
+    if (!token) return;
+    localStorage.setItem('gh_token', token.trim());
+    token = token.trim();
+  }}
+
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  btn.textContent = '触发中...';
+
+  try {{
+    const res = await fetch(`https://api.github.com/repos/${{REPO}}/actions/workflows/${{WORKFLOW}}/dispatches`, {{
+      method: 'POST',
+      headers: {{ Authorization: `token ${{token}}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ ref: BRANCH }})
+    }});
+    if (!res.ok) throw new Error('触发失败，请检查 Token 权限');
+    showToast('✓ 已触发更新，约2-3分钟后刷新页面查看', 3500);
+  }} catch(err) {{
+    showToast('❌ ' + err.message, 4000);
+  }} finally {{
+    setTimeout(() => {{ btn.disabled = false; btn.textContent = '🔄 立即刷新'; }}, 3000);
+  }}
+}}
 
 function openTradeModal() {{
   document.getElementById('tradeModal').classList.add('open');
