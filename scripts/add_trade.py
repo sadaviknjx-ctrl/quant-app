@@ -6,7 +6,7 @@ from datetime import datetime
 ROOT       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TRADES_CSV = os.path.join(ROOT, 'data', 'trades.csv')
 
-STOCKS = ['三峡新材', '京东方A', '华远控股']
+STOCKS = ['三峡新材', '京东方A', '华远控股', '铜陵有色']
 
 def ask(prompt, valid=None):
     while True:
@@ -28,7 +28,7 @@ def main():
 
     # 股票
     print('股票: ' + ' / '.join(f'{i+1}.{s}' for i, s in enumerate(STOCKS)))
-    idx = ask('选择 (1-3): ', [str(i+1) for i in range(len(STOCKS))])
+    idx = ask(f'选择 (1-{len(STOCKS)}): ', [str(i+1) for i in range(len(STOCKS))])
     stock = STOCKS[int(idx) - 1]
 
     # 操作

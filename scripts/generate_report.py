@@ -14,6 +14,7 @@ STOCKS = {
     '三峡新材': {'code': '600293', 'symbol': 'sh600293', 'hold': 1600, 'cost': 3.748},
     '京东方A':  {'code': '000725', 'symbol': 'sz000725', 'hold': 300,  'cost': 4.892},
     '华远控股': {'code': '600743', 'symbol': 'sh600743', 'hold': 300,  'cost': -2.722},
+    '铜陵有色': {'code': '000630', 'symbol': 'sz000630', 'hold': 100,  'cost': 7.19},
 }
 
 def update_data():
@@ -482,6 +483,10 @@ def generate():
     trade_stat = calc_trade_stats(trades)
 
     today_md = now.strftime('%m-%d')
+    STOCK_BUTTONS_HTML = ''.join(
+        '<button class="seg-btn" onclick="selectStock(this,\'' + name + '\')">' + name + '</button>'
+        for name in STOCKS
+    )
     cards = ''
     for name, cfg in STOCKS.items():
         if name in signals:
@@ -542,9 +547,7 @@ def generate():
   <p class="section-title">今日操作清单</p>
   <ul class="checklist">
     <li><div class="chk"></div>页面已刷新，数据为最新交易日</li>
-    <li><div class="chk"></div>三峡新材条件单已挂好</li>
-    <li><div class="chk"></div>京东方A条件单已挂好</li>
-    <li><div class="chk"></div>华远控股条件单已挂好</li>
+    {''.join(f'<li><div class="chk"></div>{name}条件单已挂好</li>' for name in STOCKS)}
     <li><div class="chk"></div>开盘30分钟已观察确认</li>
     <li><div class="chk"></div>收盘前T仓已平</li>
   </ul>
@@ -579,9 +582,7 @@ def generate():
     <div class="form-group">
       <label class="form-label">股票</label>
       <div class="seg-group" id="stockSeg">
-        <button class="seg-btn" onclick="selectStock(this,'三峡新材')">三峡新材</button>
-        <button class="seg-btn" onclick="selectStock(this,'京东方A')">京东方A</button>
-        <button class="seg-btn" onclick="selectStock(this,'华远控股')">华远控股</button>
+        {STOCK_BUTTONS_HTML}
       </div>
     </div>
 
