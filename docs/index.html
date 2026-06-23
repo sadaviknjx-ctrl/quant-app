@@ -28,6 +28,10 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 .profit.positive{color:#00a854}
 .profit.negative{color:#f5222d}
 
+/* ── Data date badge ── */
+.data-date-fresh{display:inline-block;font-size:11px;color:#00a854;background:#f6ffed;border:1px solid #b7eb8f;border-radius:6px;padding:2px 7px;margin-bottom:10px}
+.data-date-stale{display:inline-block;font-size:11px;color:#fa8c16;background:#fff7e6;border:1px solid #ffd591;border-radius:6px;padding:2px 7px;margin-bottom:10px}
+
 /* ── Warnings ── */
 .warn{font-size:12px;padding:7px 10px;border-radius:8px;margin-bottom:8px;font-weight:500}
 .warn-red{background:#fff1f0;color:#cf1322;border-left:3px solid #f5222d}
@@ -145,7 +149,7 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 <body>
 <h1>做T辅助信号</h1>
 <div class="sub-row">
-  <p class="sub">更新于 2026-06-23 16:02 &nbsp;·&nbsp; 工作日 15:45 自动刷新</p>
+  <p class="sub">更新于 2026-06-23 16:10 &nbsp;·&nbsp; 工作日 17:30 自动刷新</p>
   <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">🔄 立即刷新</button>
 </div>
 
@@ -160,6 +164,7 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
       <span class="profit negative">-1.5%</span>
     </div>
   </div>
+  <div class="data-date-stale">数据 06-22（非最新）</div>
 
   
 
@@ -209,6 +214,7 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
       <span class="profit positive">+41.7%</span>
     </div>
   </div>
+  <div class="data-date-stale">数据 06-22（非最新）</div>
 
   
 
@@ -258,6 +264,7 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
       <span class="profit positive">+4.932元/股（成本已为负）</span>
     </div>
   </div>
+  <div class="data-date-stale">数据 06-22（非最新）</div>
 
   <div class="warn warn-red">连续5日低于MA20，趋势持续走弱，暂停做T</div>
 
@@ -303,8 +310,8 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
   <div class="step">
     <div class="step-num">1</div>
     <div class="step-body">
-      <p class="step-title"><span class="time-pill">15:45</span>页面自动更新</p>
-      <p class="step-desc">每个工作日收盘后自动拉取数据，刷新本页面即可查看当日信号</p>
+      <p class="step-title"><span class="time-pill">17:30</span>页面自动更新</p>
+      <p class="step-desc">每个工作日收盘后自动拉取数据，刷新本页面即可查看当日信号。若卡片显示"非最新"，点右上角刷新按钮手动拉取</p>
     </div>
   </div>
   <div class="step">

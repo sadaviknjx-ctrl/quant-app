@@ -52,6 +52,7 @@ def calc_signals(cfg):
     boll_up = (ma20 + 2 * std20).iloc[-1]
     boll_dn = (ma20 - 2 * std20).iloc[-1]
 
+    last_date  = df['date'].iloc[-1].strftime('%m-%d')
     last_close = float(close.iloc[-1])
     prev_high  = float(high.iloc[-1])
     prev_low   = float(low.iloc[-1])
@@ -121,7 +122,7 @@ def calc_signals(cfg):
         advice = ('neutral', '正常震荡，按挂单价位操作即可')
 
     return {
-        'last_close': last_close, 'cost': cost,
+        'last_close': last_close, 'last_date': last_date, 'cost': cost,
         'profit_label': profit_label, 'profit_pct': profit_pct, 'profit_pos': profit_pos,
         'trend': trend, 'trend_cls': trend_cls,
         'vol_desc': vol_desc, 'vol_ratio': vol_ratio,
@@ -133,9 +134,12 @@ def calc_signals(cfg):
         'warnings': warnings,
     }
 
-def stock_card(name, s):
+def stock_card(name, s, today_md):
     profit_cls = 'positive' if s['profit_pos'] else 'negative'
     trend_cls  = s['trend_cls']
+    stale      = s['last_date'] != today_md
+    date_cls   = 'data-date-stale' if stale else 'data-date-fresh'
+    date_label = f"数据 {s['last_date']}" + ('（非最新）' if stale else '（最新）')
 
     warn_html = ''
     for level, msg in s['warnings']:
@@ -152,6 +156,7 @@ def stock_card(name, s):
       <span class="profit {profit_cls}">{s['profit_label']}</span>
     </div>
   </div>
+  <div class="{date_cls}">{date_label}</div>
 
   {warn_html}
 
@@ -215,6 +220,10 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 .profit{font-size:12px;font-weight:500}
 .profit.positive{color:#00a854}
 .profit.negative{color:#f5222d}
+
+/* ── Data date badge ── */
+.data-date-fresh{display:inline-block;font-size:11px;color:#00a854;background:#f6ffed;border:1px solid #b7eb8f;border-radius:6px;padding:2px 7px;margin-bottom:10px}
+.data-date-stale{display:inline-block;font-size:11px;color:#fa8c16;background:#fff7e6;border:1px solid #ffd591;border-radius:6px;padding:2px 7px;margin-bottom:10px}
 
 /* ── Warnings ── */
 .warn{font-size:12px;padding:7px 10px;border-radius:8px;margin-bottom:8px;font-weight:500}
@@ -472,10 +481,11 @@ def generate():
     trades     = load_trades()
     trade_stat = calc_trade_stats(trades)
 
+    today_md = now.strftime('%m-%d')
     cards = ''
     for name, cfg in STOCKS.items():
         if name in signals:
-            cards += stock_card(name, signals[name])
+            cards += stock_card(name, signals[name], today_md)
         else:
             cards += f'<div class="card"><p style="color:#f5222d">{name} 加载失败: {errors[name]}</p></div>'
 
@@ -490,7 +500,7 @@ def generate():
 <body>
 <h1>做T辅助信号</h1>
 <div class="sub-row">
-  <p class="sub">更新于 {now.strftime('%Y-%m-%d %H:%M')} &nbsp;·&nbsp; 工作日 15:45 自动刷新</p>
+  <p class="sub">更新于 {now.strftime('%Y-%m-%d %H:%M')} &nbsp;·&nbsp; 工作日 17:30 自动刷新</p>
   <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">🔄 立即刷新</button>
 </div>
 
@@ -501,8 +511,8 @@ def generate():
   <div class="step">
     <div class="step-num">1</div>
     <div class="step-body">
-      <p class="step-title"><span class="time-pill">15:45</span>页面自动更新</p>
-      <p class="step-desc">每个工作日收盘后自动拉取数据，刷新本页面即可查看当日信号</p>
+      <p class="step-title"><span class="time-pill">17:30</span>页面自动更新</p>
+      <p class="step-desc">每个工作日收盘后自动拉取数据，刷新本页面即可查看当日信号。若卡片显示"非最新"，点右上角刷新按钮手动拉取</p>
     </div>
   </div>
   <div class="step">

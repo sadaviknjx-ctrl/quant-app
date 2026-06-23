@@ -2,7 +2,7 @@ name: Update Quant Report
 
 on:
   schedule:
-    - cron: '45 7 * * 1-5'   # Mon–Fri 15:45 Beijing (07:45 UTC)
+    - cron: '30 9 * * 1-5'   # Mon–Fri 17:30 Beijing (09:30 UTC) — 给新浪数据源留出发布延迟缓冲
   workflow_dispatch:            # 允许手动触发
 
 permissions:
