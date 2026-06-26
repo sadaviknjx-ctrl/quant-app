@@ -18,6 +18,8 @@ VOLATILITY_MAX = 8.0  # 近20日日均波幅最高（%，太高风险大）
 TOP_N = 15            # 最终推荐数量
 CANDIDATE_CAP = 400   # 按成交额取前N只做精细分析，控制运行时长
 MAX_WORKERS  = 12     # 并发拉取历史数据的线程数
+RPS_PERIOD   = 120    # RPS相对强度计算周期（参考欧奈尔CANSLIM体系）
+RPS_THRESHOLD = 85    # 候选池内RPS百分位阈值（候选池已是流动性较好子集，阈值略低于全市场90）
 
 def screen():
     print('正在拉取全市场行情数据...')
@@ -51,7 +53,7 @@ def screen():
     print(f'基础过滤后剩余: {len(df)} 只，取成交额前{CANDIDATE_CAP}只精细分析...')
 
     end_date   = datetime.now().strftime('%Y%m%d')
-    start_date = (datetime.now() - timedelta(days=40)).strftime('%Y%m%d')
+    start_date = (datetime.now() - timedelta(days=RPS_PERIOD + 100)).strftime('%Y%m%d')  # 多留缓冲覆盖RPS所需周期（含节假日）
 
     def analyze_one(row):
         code   = row['code']
@@ -63,13 +65,15 @@ def screen():
         try:
             hist = ak.stock_zh_a_daily(symbol=symbol, start_date=start_date,
                                         end_date=end_date, adjust='qfq')
-            if len(hist) < 15:
+            if len(hist) < 25:
                 return None
 
+            hist['open']  = hist['open'].astype(float)
             hist['close'] = hist['close'].astype(float)
             hist['high']  = hist['high'].astype(float)
             hist['low']   = hist['low'].astype(float)
             hist['vol']   = hist['volume'].astype(float)
+            hist['amt']   = hist['amount'].astype(float)
 
             # 日均波幅 = (high-low)/close 的均值
             hist['range_pct'] = (hist['high'] - hist['low']) / hist['close'] * 100
@@ -88,12 +92,42 @@ def screen():
             vol20 = hist['vol'].tail(20).mean()
             vol_ratio = vol5 / vol20 if vol20 > 0 else 0
 
-            # 评分：波幅适中 + 量能稳定 + 价格站上MA5
+            # 基础评分：波幅适中 + 量能稳定 + 价格站上MA5
             score = 0
             if ma5 > ma10:        score += 30
             if price > ma5:       score += 20
             if 3 < avg_range < 6: score += 30  # 波幅最佳区间
             if 0.8 < vol_ratio < 2.0: score += 20
+
+            # ── 移植自开源项目 Sequoia-X (github.com/sngyai/Sequoia) 的技术策略 ──
+            signals = []
+
+            # 1. 海龟突破：今日收盘价突破此前20日最高价 + 放量 + 阳线
+            close_today, open_today = hist['close'].iloc[-1], hist['open'].iloc[-1]
+            amount_today = hist['amt'].iloc[-1]
+            prior_20_high = hist['high'].iloc[-21:-1].max() if len(hist) >= 21 else None
+            turtle = bool(
+                prior_20_high is not None and
+                close_today >= prior_20_high and
+                amount_today >= 1e8 and
+                close_today > open_today
+            )
+            if turtle:
+                signals.append('海龟突破')
+                score += 15
+
+            # 2. 均线放量：MA5>MA10>MA20 多头排列 + 放量
+            ma_volume = bool(ma5 > ma10 > ma20 and vol_ratio > 1.3)
+            if ma_volume:
+                signals.append('均线放量')
+                score += 10
+
+            # 3. RPS 相对强度（欧奈尔体系）：候选池内排名前列，留待主流程统一计算百分位
+            pct_period = None
+            if len(hist) > RPS_PERIOD:
+                base_close = hist['close'].iloc[-RPS_PERIOD - 1]
+                if base_close > 0:
+                    pct_period = (close_today - base_close) / base_close
 
             return {
                 'code': code, 'name': name, 'price': price,
@@ -101,6 +135,7 @@ def screen():
                 'ma5': round(ma5, 2), 'ma10': round(ma10, 2), 'ma20': round(ma20, 2),
                 'vol_ratio': round(vol_ratio, 2), 'score': score,
                 'trend': '↑' if ma5 > ma10 else ('↓' if ma5 < ma10 else '→'),
+                'signals': signals, 'pct_period': pct_period,
             }
         except Exception:
             return None
@@ -115,6 +150,21 @@ def screen():
             if i % 50 == 0:
                 print(f'  已处理 {i}/{len(futures)}')
 
+    # RPS 相对强度：在候选池内按120日涨幅排百分位（参考 Sequoia-X 的 RpsBreakoutStrategy）
+    valid_pct = [r for r in results if r['pct_period'] is not None]
+    if valid_pct:
+        s = pd.Series([r['pct_period'] for r in valid_pct])
+        ranks = s.rank(pct=True) * 100
+        for r, rank in zip(valid_pct, ranks):
+            r['rps'] = round(rank, 1)
+            if rank >= RPS_THRESHOLD:
+                r['signals'].append('RPS强势')
+                r['score'] += 15
+
+    for r in results:
+        r.pop('pct_period', None)
+        r.setdefault('rps', None)
+
     results.sort(key=lambda x: x['score'], reverse=True)
     return results[:TOP_N]
 
@@ -122,19 +172,19 @@ def build_html(results):
     now = datetime.now()
 
     if not results:
-        rows = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#64748b">暂无符合条件的股票</td></tr>'
+        rows = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#64748b">暂无符合条件的股票</td></tr>'
     else:
         rows = ''
         for r in results:
             trend_color = '#ef4444' if r['trend'] == '↑' else ('#22c55e' if r['trend'] == '↓' else '#94a3b8')
             score_color = '#22c55e' if r['score'] >= 70 else ('#f59e0b' if r['score'] >= 50 else '#94a3b8')
+            signal_html = ''.join(f'<span class="sig-tag">{s}</span>' for s in r['signals']) or '<span class="sig-none">—</span>'
             rows += f"""<tr>
               <td><span class="sname">{r['name']}</span><br><span class="scode">{r['code']}</span></td>
               <td style="font-weight:700">{r['price']}</td>
               <td style="color:{trend_color}">{r['trend']} {r['ma5']}</td>
               <td>{r['amount_wan']}万</td>
-              <td>{r['avg_range']}%</td>
-              <td>{r['vol_ratio']}x</td>
+              <td>{signal_html}</td>
               <td style="color:{score_color};font-weight:700">{r['score']}</td>
             </tr>"""
 
@@ -162,6 +212,8 @@ def build_html(results):
   .crit-item{{font-size:12px;color:var(--color-text-secondary);margin-bottom:5px;padding-left:10px;line-height:1.6}}
   .back-btn{{display:block;width:100%;padding:12px;background:var(--color-background-secondary);color:var(--color-text-secondary);border:0.5px solid var(--color-border-secondary);border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:12px;text-align:center;text-decoration:none}}
   .footer{{text-align:center;font-size:11px;color:var(--color-text-tertiary);padding-bottom:20px}}
+  .sig-tag{{display:inline-block;background:#e8f4ff;color:#0958d9;border-radius:4px;padding:1px 5px;font-size:10px;margin:1px;white-space:nowrap}}
+  .sig-none{{color:#c0c4cc}}
 </style>
 </head>
 <body>
@@ -181,7 +233,7 @@ def build_html(results):
   <table>
     <thead>
       <tr>
-        <th>股票</th><th>现价</th><th>趋势/MA5</th><th>成交额</th><th>日均波幅</th><th>量比</th><th>评分</th>
+        <th>股票</th><th>现价</th><th>趋势/MA5</th><th>成交额</th><th>信号</th><th>评分</th>
       </tr>
     </thead>
     <tbody>{rows}</tbody>
@@ -195,6 +247,13 @@ def build_html(results):
   <div class="crit-item">▸ 日均波幅在3%–6%（最佳做T区间）：+30分</div>
   <div class="crit-item">▸ 量比在0.8x–2.0x（量能稳定）：+20分</div>
   <div class="crit-item" style="color:#f59e0b">▸ 评分≥70为优先关注，仅供参考</div>
+</div>
+
+<div class="criteria">
+  <div class="criteria-title">技术信号说明（移植自开源项目 Sequoia-X）</div>
+  <div class="crit-item">▸ <b>海龟突破</b>：收盘价突破前20日最高价 + 成交额超1亿 + 阳线：+15分</div>
+  <div class="crit-item">▸ <b>均线放量</b>：MA5&gt;MA10&gt;MA20 多头排列 + 放量1.3倍以上：+10分</div>
+  <div class="crit-item">▸ <b>RPS强势</b>：120日涨幅在候选池内排名前15%（欧奈尔相对强度体系）：+15分</div>
 </div>
 
 <a class="back-btn" href="report.html">← 返回持仓信号</a>
