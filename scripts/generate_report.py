@@ -11,9 +11,8 @@ DOCS   = os.path.join(ROOT, 'docs')
 os.makedirs(DOCS, exist_ok=True)
 
 STOCKS = {
-    '三峡新材': {'code': '600293', 'symbol': 'sh600293', 'hold': 500,  'cost': 4.388},
-    '京东方A':  {'code': '000725', 'symbol': 'sz000725', 'hold': 400,  'cost': 5.317},
-    '华远控股': {'code': '600743', 'symbol': 'sh600743', 'hold': 1300, 'cost': 1.087},
+    '京东方A':  {'code': '000725', 'symbol': 'sz000725', 'hold': 700,  'cost': 6.427},
+    '华远控股': {'code': '600743', 'symbol': 'sh600743', 'hold': 2000, 'cost': 1.458},
     '铜陵有色': {'code': '000630', 'symbol': 'sz000630', 'hold': 200,  'cost': 7.060},
 }
 
