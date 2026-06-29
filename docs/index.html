@@ -32,6 +32,11 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 .data-date-fresh{display:inline-block;font-size:11px;color:#00a854;background:#f6ffed;border:1px solid #b7eb8f;border-radius:6px;padding:2px 7px;margin-bottom:10px}
 .data-date-stale{display:inline-block;font-size:11px;color:#fa8c16;background:#fff7e6;border:1px solid #ffd591;border-radius:6px;padding:2px 7px;margin-bottom:10px}
 
+/* ── Hold-only (strong trend) box ── */
+.hold-only-box{background:#f6ffed;border:1px solid #b7eb8f;border-radius:10px;padding:12px}
+.hold-only-title{font-size:13px;font-weight:600;color:#389e0d;margin-bottom:5px}
+.hold-only-desc{font-size:12px;color:#5a6072;line-height:1.6}
+
 /* ── Warnings ── */
 .warn{font-size:12px;padding:7px 10px;border-radius:8px;margin-bottom:8px;font-weight:500}
 .warn-red{background:#fff1f0;color:#cf1322;border-left:3px solid #f5222d}
@@ -149,7 +154,7 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 <body>
 <h1>做T辅助信号</h1>
 <div class="sub-row">
-  <p class="sub">更新于 2026-06-29 17:50 &nbsp;·&nbsp; 工作日 17:30 自动刷新</p>
+  <p class="sub">更新于 2026-06-29 18:41 &nbsp;·&nbsp; 工作日 17:30 自动刷新</p>
   <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">🔄 立即刷新</button>
 </div>
 
@@ -166,7 +171,7 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
   </div>
   <div class="data-date-fresh">数据 06-29（最新）</div>
 
-  
+  <div class="warn warn-red">近120日涨幅97%，强势趋势中做T历史回测跑输持有，建议暂停做T、以持有为主</div>
 
   <div class="meta-row">
     <span class="trend trend-up">↑ 短期上升</span>
@@ -186,20 +191,9 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 
   <div class="divider"></div>
 
-  <p class="t-label-row">明日挂单建议 <span class="shares-badge">100股</span></p>
-  <div class="t-grid">
-    <div class="t-cell t-sell">
-      <div class="t-cell-label">高抛（卖出）</div>
-      <div class="t-cell-price">8.29</div>
-    </div>
-    <div class="t-cell t-buy">
-      <div class="t-cell-label">低吸（买回）</div>
-      <div class="t-cell-price">7.43</div>
-    </div>
-    <div class="t-cell t-stop">
-      <div class="t-cell-label">止损（减仓）</div>
-      <div class="t-cell-price">7.36</div>
-    </div>
+  <div class="hold-only-box">
+    <div class="hold-only-title">📈 强势持有模式</div>
+    <div class="hold-only-desc">该股处于强势上升趋势，回测显示做T会跑输持有不动。暂不提供挂单建议，止损价仍供风控参考：<b>7.41</b></div>
   </div>
 
   <div class="advice advice-warning">超买区域，优先高抛，谨慎追涨</div>
@@ -240,15 +234,15 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
   <div class="t-grid">
     <div class="t-cell t-sell">
       <div class="t-cell-label">高抛（卖出）</div>
-      <div class="t-cell-price">2.32</div>
+      <div class="t-cell-price">2.31</div>
     </div>
     <div class="t-cell t-buy">
       <div class="t-cell-label">低吸（买回）</div>
-      <div class="t-cell-price">2.08</div>
+      <div class="t-cell-price">2.09</div>
     </div>
     <div class="t-cell t-stop">
       <div class="t-cell-label">止损（减仓）</div>
-      <div class="t-cell-price">2.06</div>
+      <div class="t-cell-price">2.07</div>
     </div>
   </div>
 
@@ -290,15 +284,15 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
   <div class="t-grid">
     <div class="t-cell t-sell">
       <div class="t-cell-label">高抛（卖出）</div>
-      <div class="t-cell-price">6.47</div>
+      <div class="t-cell-price">6.44</div>
     </div>
     <div class="t-cell t-buy">
       <div class="t-cell-label">低吸（买回）</div>
-      <div class="t-cell-price">6.16</div>
+      <div class="t-cell-price">6.20</div>
     </div>
     <div class="t-cell t-stop">
       <div class="t-cell-label">止损（减仓）</div>
-      <div class="t-cell-price">6.10</div>
+      <div class="t-cell-price">6.14</div>
     </div>
   </div>
 

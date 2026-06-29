@@ -66,10 +66,20 @@ def calc_signals(cfg):
     ma10_v = ma10.iloc[-1]
     ma20_v = ma20.iloc[-1]
 
-    t_sell   = round(prev_high * 1.01, 2)
-    t_buy    = round(prev_low  * 0.99, 2)
+    # 价差±0.4%（原±1%回测触发率极低，收窄后历史触发频率提升5-10倍，详见 backtest_t_strategy.py）
+    T_BAND   = 0.004
+    t_sell   = round(prev_high * (1 + T_BAND), 2)
+    t_buy    = round(prev_low  * (1 - T_BAND), 2)
     stop     = round(min(last_close * 0.97, t_buy * 0.99), 2)
     t_shares = max(round(cfg['hold'] * 0.2 / 100) * 100, 100)
+
+    # 120日涨幅超过30%视为强势趋势：回测显示这类股票做T会跑输持有不动，建议暂停做T
+    pct_120 = None
+    if len(close) > 120:
+        base = close.iloc[-121]
+        if base > 0:
+            pct_120 = (last_close - base) / base
+    strong_trend = pct_120 is not None and pct_120 > 0.30
 
     cost = cfg['cost']
     if cost <= 0:
@@ -110,6 +120,9 @@ def calc_signals(cfg):
     if t_sell - t_buy < last_close * 0.02:
         warnings.append(('yellow', '高抛低吸价差不足2%，手续费后盈利空间有限'))
 
+    if strong_trend:
+        warnings.append(('red', f'近120日涨幅{pct_120*100:.0f}%，强势趋势中做T历史回测跑输持有，建议暂停做T、以持有为主'))
+
     if last_close < boll_dn:
         advice = ('warning', '超卖区域，优先低吸，暂缓高抛')
     elif last_close > boll_up:
@@ -131,7 +144,7 @@ def calc_signals(cfg):
         't_sell': t_sell, 't_buy': t_buy, 'stop': stop,
         't_shares': t_shares, 'advice': advice,
         'hold': cfg['hold'], 'code': cfg['code'],
-        'warnings': warnings,
+        'warnings': warnings, 'strong_trend': strong_trend,
     }
 
 def stock_card(name, s, today_md):
@@ -178,7 +191,7 @@ def stock_card(name, s, today_md):
 
   <div class="divider"></div>
 
-  <p class="t-label-row">明日挂单建议 <span class="shares-badge">{s['t_shares']}股</span></p>
+  {f'''<p class="t-label-row">明日挂单建议 <span class="shares-badge">{s['t_shares']}股</span></p>
   <div class="t-grid">
     <div class="t-cell t-sell">
       <div class="t-cell-label">高抛（卖出）</div>
@@ -192,7 +205,10 @@ def stock_card(name, s, today_md):
       <div class="t-cell-label">止损（减仓）</div>
       <div class="t-cell-price">{s['stop']:.2f}</div>
     </div>
-  </div>
+  </div>''' if not s['strong_trend'] else f'''<div class="hold-only-box">
+    <div class="hold-only-title">📈 强势持有模式</div>
+    <div class="hold-only-desc">该股处于强势上升趋势，回测显示做T会跑输持有不动。暂不提供挂单建议，止损价仍供风控参考：<b>{s['stop']:.2f}</b></div>
+  </div>'''}
 
   <div class="advice advice-{s['advice'][0]}">{s['advice'][1]}</div>
 </div>"""
@@ -224,6 +240,11 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 /* ── Data date badge ── */
 .data-date-fresh{display:inline-block;font-size:11px;color:#00a854;background:#f6ffed;border:1px solid #b7eb8f;border-radius:6px;padding:2px 7px;margin-bottom:10px}
 .data-date-stale{display:inline-block;font-size:11px;color:#fa8c16;background:#fff7e6;border:1px solid #ffd591;border-radius:6px;padding:2px 7px;margin-bottom:10px}
+
+/* ── Hold-only (strong trend) box ── */
+.hold-only-box{background:#f6ffed;border:1px solid #b7eb8f;border-radius:10px;padding:12px}
+.hold-only-title{font-size:13px;font-weight:600;color:#389e0d;margin-bottom:5px}
+.hold-only-desc{font-size:12px;color:#5a6072;line-height:1.6}
 
 /* ── Warnings ── */
 .warn{font-size:12px;padding:7px 10px;border-radius:8px;margin-bottom:8px;font-weight:500}
