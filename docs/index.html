@@ -155,7 +155,7 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 <body>
 <h1>做T辅助信号</h1>
 <div class="sub-row">
-  <p class="sub">更新于 2026-06-30 11:58 &nbsp;·&nbsp; 工作日 17:30 自动刷新</p>
+  <p class="sub">更新于 2026-06-30 20:10 &nbsp;·&nbsp; 工作日 17:30 自动刷新</p>
   <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">🔄 立即刷新</button>
 </div>
 
@@ -399,15 +399,15 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
   <p class="section-title">做T战绩</p>
   <div class="stat-summary">
     <div class="stat-item">
-      <span class="stat-num">0</span>
+      <span class="stat-num">1</span>
       <span class="stat-label">总做T次数</span>
     </div>
     <div class="stat-item">
-      <span class="stat-num" style="color:#f5222d">0%</span>
+      <span class="stat-num" style="color:#00a854">100%</span>
       <span class="stat-label">胜率</span>
     </div>
     <div class="stat-item">
-      <span class="stat-num" style="color:#00a854">+0.00</span>
+      <span class="stat-num" style="color:#00a854">+186.53</span>
       <span class="stat-label">累计收益(元)</span>
     </div>
   </div>
@@ -420,12 +420,22 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
     <span class="t-stat-val">胜率</span>
     <span class="t-stat-val">盈亏</span>
   </div>
-  <div style="text-align:center;color:#b0b5c0;font-size:12px;padding:10px">暂无完成的做T记录</div>
+  <div class="t-stat-row">
+          <span class="t-stat-name">京东方A</span>
+          <span class="t-stat-val">1次</span>
+          <span class="t-stat-val" style="color:#00a854">100%</span>
+          <span class="t-stat-val" style="color:#00a854">+186.53元</span>
+        </div>
 
   <div class="divider"></div>
 
   <p class="section-title" style="margin-bottom:8px">近7日记录</p>
-  <div style="text-align:center;color:#b0b5c0;font-size:12px;padding:10px">近7日暂无记录</div>
+  <div class="trade-row">
+          <span class="trade-date">06/30</span>
+          <span class="trade-stock">京东方A</span>
+          <span class="trade-action trade-sell">高抛</span>
+          <span class="trade-detail">300股 @ 8.75</span>
+        </div>
 
   <button class="add-trade-btn" onclick="openTradeModal()">＋ 记录一笔交易</button>
 </div>
