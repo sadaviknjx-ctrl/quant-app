@@ -164,15 +164,31 @@ def screen():
     for r in results:
         r.pop('pct_period', None)
         r.setdefault('rps', None)
+        entry_price, entry_reason = suggest_entry(r)
+        r['entry_price']  = entry_price
+        r['entry_reason'] = entry_reason
 
     results.sort(key=lambda x: x['score'], reverse=True)
     return results[:TOP_N]
+
+
+def suggest_entry(r):
+    """按信号类型给出建仓建议价，优先级：海龟突破(顺势) > RPS强势(等回踩) > 均线放量(折中) > 无信号(保守折价)"""
+    price, ma5 = r['price'], r['ma5']
+    if '海龟突破' in r['signals']:
+        return round(price, 2), '突破型信号，建议现价附近顺势介入，不必等回调'
+    if 'RPS强势' in r['signals']:
+        return round(ma5, 2), f'强势股，建议等回踩MA5（{ma5}）再介入，避免追高'
+    if '均线放量' in r['signals']:
+        mid = round((price + ma5) / 2, 2)
+        return mid, f'温和放量，建议现价与MA5之间（约{mid}）择机介入'
+    return round(price * 0.98, 2), '无强信号，建议现价小幅折价（-2%）介入，避免追高'
 
 def build_html(results):
     now = datetime.now()
 
     if not results:
-        rows = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#64748b">暂无符合条件的股票</td></tr>'
+        rows = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#64748b">暂无符合条件的股票</td></tr>'
     else:
         rows = ''
         for r in results:
@@ -186,6 +202,7 @@ def build_html(results):
               <td>{r['amount_wan']}万</td>
               <td>{signal_html}</td>
               <td style="color:{score_color};font-weight:700">{r['score']}</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({{"code":"{r['code']}","name":"{r['name']}","price":{r['price']},"entry":{r['entry_price']},"reason":"{r['entry_reason']}"}})'>+加入</button></td>
             </tr>"""
 
     html = f"""<!DOCTYPE html>
@@ -214,6 +231,22 @@ def build_html(results):
   .footer{{text-align:center;font-size:11px;color:var(--color-text-tertiary);padding-bottom:20px}}
   .sig-tag{{display:inline-block;background:#e8f4ff;color:#0958d9;border-radius:4px;padding:1px 5px;font-size:10px;margin:1px;white-space:nowrap}}
   .sig-none{{color:#c0c4cc}}
+  .add-pos-btn{{padding:4px 8px;background:#1677ff;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap}}
+  .modal-overlay{{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center}}
+  .modal-overlay.open{{display:flex}}
+  .modal{{background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:540px;animation:slideUp .25s ease}}
+  @keyframes slideUp{{from{{transform:translateY(100%)}}to{{transform:translateY(0)}}}}
+  .modal-title{{font-size:16px;font-weight:600;color:#1a1d23;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}}
+  .modal-close{{background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer;line-height:1}}
+  .reason-box{{background:#f0f7ff;border:1px solid #91caff;border-radius:10px;padding:10px 12px;font-size:12px;color:#0958d9;margin-bottom:16px;line-height:1.6}}
+  .form-group{{margin-bottom:14px}}
+  .form-label{{font-size:12px;color:#8a8f9b;margin-bottom:6px;display:block;font-weight:500}}
+  .form-input{{width:100%;padding:11px 12px;border:1.5px solid #e8eaed;border-radius:10px;font-size:15px;color:#1a1d23;background:#f8f9fb;outline:none}}
+  .form-input:focus{{border-color:#1677ff;background:#fff}}
+  .form-row{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
+  .submit-btn{{width:100%;padding:14px;background:#1677ff;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;margin-top:6px}}
+  .submit-btn:disabled{{background:#b0c4de;cursor:not-allowed}}
+  .toast{{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:200;display:none;white-space:nowrap}}
 </style>
 </head>
 <body>
@@ -233,7 +266,7 @@ def build_html(results):
   <table>
     <thead>
       <tr>
-        <th>股票</th><th>现价</th><th>趋势/MA5</th><th>成交额</th><th>信号</th><th>评分</th>
+        <th>股票</th><th>现价</th><th>趋势/MA5</th><th>成交额</th><th>信号</th><th>评分</th><th></th>
       </tr>
     </thead>
     <tbody>{rows}</tbody>
@@ -256,9 +289,158 @@ def build_html(results):
   <div class="crit-item">▸ <b>RPS强势</b>：120日涨幅在候选池内排名前15%（欧奈尔相对强度体系）：+15分</div>
 </div>
 
-<a class="back-btn" href="report.html">← 返回持仓信号</a>
+<a class="back-btn" href="index.html">← 返回持仓信号</a>
 
 <div class="footer">仅供参考，不构成投资建议 · 据此操作风险自负</div>
+
+<!-- 加入持仓弹窗 -->
+<div class="modal-overlay" id="addModal" onclick="closeOnBackdrop(event)">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="addModalTitle">加入持仓</span>
+      <button class="modal-close" onclick="closeAddModal()">×</button>
+    </div>
+
+    <div class="reason-box" id="entryReason"></div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">建仓价（元，可调整）</label>
+        <input class="form-input" id="entryPrice" type="number" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">建仓数量（股）</label>
+        <input class="form-input" id="entryShares" type="number" step="100" placeholder="如：500">
+      </div>
+    </div>
+    <p style="font-size:11px;color:#9ca3af;margin:-6px 0 14px" id="cashHint"></p>
+
+    <button class="submit-btn" id="addSubmitBtn" onclick="submitAddPosition()">确认加入持仓</button>
+    <p style="font-size:11px;color:#b0b5c0;text-align:center;margin-top:10px">提交后约2-3分钟，刷新持仓页即可看到新卡片</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const REPO  = 'sadaviknjx-ctrl/quant-app';
+const BRANCH = 'main';
+const STOCKS_FILE = 'data/stocks.json';
+const WORKFLOW = 'update.yml';
+
+let pending = null;
+
+function showToast(msg, ms=3000) {{
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display='none', ms);
+}}
+
+async function openAddModal(stock) {{
+  pending = stock;
+  document.getElementById('addModalTitle').textContent = `加入持仓：${{stock.name}}`;
+  document.getElementById('entryReason').textContent = stock.reason;
+  document.getElementById('entryPrice').value = stock.entry;
+  document.getElementById('entryShares').value = '';
+  document.getElementById('cashHint').textContent = '正在查询可用资金…';
+  document.getElementById('addModal').classList.add('open');
+
+  try {{
+    const res = await fetch(`https://raw.githubusercontent.com/${{REPO}}/${{BRANCH}}/data/account.json?_=${{Date.now()}}`);
+    if (res.ok) {{
+      const acc = await res.json();
+      const cash = acc.available_cash;
+      const suggestShares = Math.floor(cash * 0.18 / stock.entry / 100) * 100;
+      document.getElementById('cashHint').textContent =
+        `账户可用资金约${{cash.toFixed(0)}}元（${{acc.date}}）· 按单票≤18%仓位建议约${{suggestShares}}股，仅供参考`;
+      if (suggestShares >= 100) document.getElementById('entryShares').value = suggestShares;
+    }} else {{
+      document.getElementById('cashHint').textContent = '暂无可用资金数据，请自行填写股数';
+    }}
+  }} catch(e) {{
+    document.getElementById('cashHint').textContent = '暂无可用资金数据，请自行填写股数';
+  }}
+}}
+
+function closeAddModal() {{
+  document.getElementById('addModal').classList.remove('open');
+}}
+function closeOnBackdrop(e) {{
+  if (e.target === document.getElementById('addModal')) closeAddModal();
+}}
+
+async function submitAddPosition() {{
+  const entry  = parseFloat(document.getElementById('entryPrice').value);
+  const shares = parseInt(document.getElementById('entryShares').value);
+  if (!entry || entry <= 0) {{ showToast('请输入有效建仓价'); return; }}
+  if (!shares || shares <= 0 || shares % 100 !== 0) {{ showToast('请输入100的整数倍股数'); return; }}
+
+  let token = localStorage.getItem('gh_token');
+  if (!token) {{
+    token = prompt('请输入 GitHub Personal Access Token（需要 repo 权限，只需输入一次）：');
+    if (!token) return;
+    localStorage.setItem('gh_token', token.trim());
+    token = token.trim();
+  }}
+
+  const btn = document.getElementById('addSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = '提交中...';
+
+  const symbol = (pending.code.startsWith('6') ? 'sh' : 'sz') + pending.code;
+
+  async function fetchFile() {{
+    const res = await fetch(`https://api.github.com/repos/${{REPO}}/contents/${{STOCKS_FILE}}?ref=${{BRANCH}}&_=${{Date.now()}}`, {{
+      cache: 'no-store',
+      headers: {{ Authorization: `token ${{token}}`, Accept: 'application/vnd.github.v3+json' }}
+    }});
+    if (!res.ok) throw new Error(`读取失败 (${{res.status}})`);
+    return res.json();
+  }}
+
+  async function writeFile() {{
+    const fileData = await fetchFile();
+    const stocks = JSON.parse(decodeURIComponent(escape(atob(fileData.content.replace(/\\n/g,'')))));
+    stocks[pending.name] = {{ code: pending.code, symbol: symbol, hold: shares, cost: entry }};
+    const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(stocks, null, 2))));
+    return fetch(`https://api.github.com/repos/${{REPO}}/contents/${{STOCKS_FILE}}`, {{
+      method: 'PUT',
+      headers: {{ Authorization: `token ${{token}}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        message: `position: add ${{pending.name}} ${{shares}}股@${{entry}}`,
+        content: newContent, sha: fileData.sha, branch: BRANCH
+      }})
+    }});
+  }}
+
+  try {{
+    let putRes = await writeFile();
+    if (putRes.status === 409) {{
+      await new Promise(r => setTimeout(r, 800));
+      putRes = await writeFile();
+    }}
+    if (!putRes.ok) {{
+      const body = await putRes.json().catch(() => ({{}}));
+      throw new Error(`写入失败 (${{putRes.status}}): ${{body.message || '未知错误'}}`);
+    }}
+
+    await fetch(`https://api.github.com/repos/${{REPO}}/actions/workflows/${{WORKFLOW}}/dispatches`, {{
+      method: 'POST',
+      headers: {{ Authorization: `token ${{token}}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ ref: BRANCH }})
+    }});
+
+    showToast(`✓ ${{pending.name}} 已加入持仓！约2-3分钟后刷新持仓页查看`, 4000);
+    closeAddModal();
+  }} catch(err) {{
+    showToast('❌ ' + err.message, 4500);
+  }} finally {{
+    btn.disabled = false;
+    btn.textContent = '确认加入持仓';
+  }}
+}}
+</script>
 </body>
 </html>"""
 

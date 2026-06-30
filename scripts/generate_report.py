@@ -4,17 +4,20 @@ from datetime import datetime
 import akshare as ak
 import time
 import os
+import json
 
 ROOT   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA   = os.path.join(ROOT, 'data')
 DOCS   = os.path.join(ROOT, 'docs')
 os.makedirs(DOCS, exist_ok=True)
 
-STOCKS = {
-    '京东方A':  {'code': '000725', 'symbol': 'sz000725', 'hold': 400,  'cost': 4.700},
-    '华远控股': {'code': '600743', 'symbol': 'sh600743', 'hold': 2000, 'cost': 1.458},
-    '铜陵有色': {'code': '000630', 'symbol': 'sz000630', 'hold': 200,  'cost': 7.060},
-}
+STOCKS_JSON = os.path.join(DATA, 'stocks.json')
+
+def load_stocks():
+    with open(STOCKS_JSON, encoding='utf-8') as f:
+        return json.load(f)
+
+STOCKS = load_stocks()
 
 def update_data():
     print('更新行情数据...')
