@@ -7,6 +7,7 @@ import os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCS = os.path.join(ROOT, 'docs')
+DATA = os.path.join(ROOT, 'data')
 os.makedirs(DOCS, exist_ok=True)
 
 # 筛选条件
