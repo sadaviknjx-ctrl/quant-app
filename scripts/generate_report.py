@@ -91,6 +91,10 @@ def calc_signals(cfg):
         profit_label = f'{profit_pct:+.1f}%'
         profit_pos   = profit_pct >= 0
 
+    # 止损减仓建议：默认减30%，浮亏超15%时加大到50%（减仓不补仓摊薄，与风控规则一致）
+    stop_reduce_pct = 50 if (profit_pct is not None and profit_pct < -15) else 30
+    stop_shares = min(max(round(cfg['hold'] * stop_reduce_pct / 100 / 100) * 100, 100), cfg['hold'])
+
     trend_val = ma5_v - ma10_v
     if last_close > ma5_v > ma10_v:
         trend, trend_cls = '↑ 短期上升', 'up'
@@ -143,6 +147,7 @@ def calc_signals(cfg):
         'boll_up': boll_up, 'boll_dn': boll_dn,
         't_sell': t_sell, 't_buy': t_buy, 'stop': stop,
         't_shares': t_shares, 'advice': advice,
+        'stop_shares': stop_shares, 'stop_reduce_pct': stop_reduce_pct,
         'hold': cfg['hold'], 'code': cfg['code'],
         'warnings': warnings, 'strong_trend': strong_trend,
     }
@@ -202,12 +207,13 @@ def stock_card(name, s, today_md):
       <div class="t-cell-price">{s['t_buy']:.2f}</div>
     </div>
     <div class="t-cell t-stop">
-      <div class="t-cell-label">止损（减仓）</div>
+      <div class="t-cell-label">止损（减{s['stop_reduce_pct']}%）</div>
       <div class="t-cell-price">{s['stop']:.2f}</div>
+      <div class="t-cell-sub">{s['stop_shares']}股</div>
     </div>
   </div>''' if not s['strong_trend'] else f'''<div class="hold-only-box">
     <div class="hold-only-title">📈 强势持有模式</div>
-    <div class="hold-only-desc">该股处于强势上升趋势，回测显示做T会跑输持有不动。暂不提供挂单建议，止损价仍供风控参考：<b>{s['stop']:.2f}</b></div>
+    <div class="hold-only-desc">该股处于强势上升趋势，回测显示做T会跑输持有不动。暂不提供挂单建议，止损价仍供风控参考：<b>{s['stop']:.2f}</b>（触发减仓{s['stop_reduce_pct']}% ≈ {s['stop_shares']}股）</div>
   </div>'''}
 
   <div class="advice advice-{s['advice'][0]}">{s['advice'][1]}</div>
@@ -279,6 +285,7 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 .t-stop{background:#fffbe6;border:1px solid #ffe58f}
 .t-cell-label{font-size:10px;color:#8a8f9b;margin-bottom:5px}
 .t-cell-price{font-size:18px;font-weight:700}
+.t-cell-sub{font-size:10px;color:#9ca3af;margin-top:2px}
 .t-sell .t-cell-price{color:#f5222d}
 .t-buy .t-cell-price{color:#389e0d}
 .t-stop .t-cell-price{color:#d46b08}
