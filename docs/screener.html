@@ -24,12 +24,28 @@
   .footer{text-align:center;font-size:11px;color:var(--color-text-tertiary);padding-bottom:20px}
   .sig-tag{display:inline-block;background:#e8f4ff;color:#0958d9;border-radius:4px;padding:1px 5px;font-size:10px;margin:1px;white-space:nowrap}
   .sig-none{color:#c0c4cc}
+  .add-pos-btn{padding:4px 8px;background:#1677ff;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center}
+  .modal-overlay.open{display:flex}
+  .modal{background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:540px;animation:slideUp .25s ease}
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .modal-title{font-size:16px;font-weight:600;color:#1a1d23;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+  .modal-close{background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer;line-height:1}
+  .reason-box{background:#f0f7ff;border:1px solid #91caff;border-radius:10px;padding:10px 12px;font-size:12px;color:#0958d9;margin-bottom:16px;line-height:1.6}
+  .form-group{margin-bottom:14px}
+  .form-label{font-size:12px;color:#8a8f9b;margin-bottom:6px;display:block;font-weight:500}
+  .form-input{width:100%;padding:11px 12px;border:1.5px solid #e8eaed;border-radius:10px;font-size:15px;color:#1a1d23;background:#f8f9fb;outline:none}
+  .form-input:focus{border-color:#1677ff;background:#fff}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .submit-btn{width:100%;padding:14px;background:#1677ff;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;margin-top:6px}
+  .submit-btn:disabled{background:#b0c4de;cursor:not-allowed}
+  .toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:200;display:none;white-space:nowrap}
 </style>
 </head>
 <body>
 
 <h1>🔍 选股推荐</h1>
-<div class="subtitle">生成时间：2026-06-30 11:11 · 共筛出 15 只</div>
+<div class="subtitle">生成时间：2026-06-30 11:47 · 共筛出 15 只</div>
 
 <div class="criteria">
   <div class="criteria-title">筛选标准</div>
@@ -43,7 +59,7 @@
   <table>
     <thead>
       <tr>
-        <th>股票</th><th>现价</th><th>趋势/MA5</th><th>成交额</th><th>信号</th><th>评分</th>
+        <th>股票</th><th>现价</th><th>趋势/MA5</th><th>成交额</th><th>信号</th><th>评分</th><th></th>
       </tr>
     </thead>
     <tbody><tr>
@@ -53,6 +69,7 @@
               <td>39566万</td>
               <td><span class="sig-tag">海龟突破</span><span class="sig-tag">RPS强势</span></td>
               <td style="color:#22c55e;font-weight:700">130</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({"code":"002972","name":"科安达","price":19.56,"entry":19.56,"reason":"突破型信号，建议现价附近顺势介入，不必等回调"})'>+加入</button></td>
             </tr><tr>
               <td><span class="sname">锌业股份</span><br><span class="scode">000751</span></td>
               <td style="font-weight:700">6.12</td>
@@ -60,6 +77,7 @@
               <td>121684万</td>
               <td><span class="sig-tag">均线放量</span><span class="sig-tag">RPS强势</span></td>
               <td style="color:#22c55e;font-weight:700">125</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({"code":"000751","name":"锌业股份","price":6.12,"entry":6.03,"reason":"强势股，建议等回踩MA5（6.03）再介入，避免追高"})'>+加入</button></td>
             </tr><tr>
               <td><span class="sname">大港股份</span><br><span class="scode">002077</span></td>
               <td style="font-weight:700">19.29</td>
@@ -67,6 +85,7 @@
               <td>93596万</td>
               <td><span class="sig-tag">海龟突破</span><span class="sig-tag">均线放量</span></td>
               <td style="color:#22c55e;font-weight:700">125</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({"code":"002077","name":"大港股份","price":19.29,"entry":19.29,"reason":"突破型信号，建议现价附近顺势介入，不必等回调"})'>+加入</button></td>
             </tr><tr>
               <td><span class="sname">电科芯片</span><br><span class="scode">600877</span></td>
               <td style="font-weight:700">17.13</td>
@@ -74,6 +93,7 @@
               <td>88342万</td>
               <td><span class="sig-tag">海龟突破</span><span class="sig-tag">均线放量</span></td>
               <td style="color:#22c55e;font-weight:700">125</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({"code":"600877","name":"电科芯片","price":17.13,"entry":17.13,"reason":"突破型信号，建议现价附近顺势介入，不必等回调"})'>+加入</button></td>
             </tr><tr>
               <td><span class="sname">国泰集团</span><br><span class="scode">603977</span></td>
               <td style="font-weight:700">16.51</td>
@@ -81,6 +101,7 @@
               <td>68066万</td>
               <td><span class="sig-tag">海龟突破</span><span class="sig-tag">均线放量</span></td>
               <td style="color:#22c55e;font-weight:700">125</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({"code":"603977","name":"国泰集团","price":16.51,"entry":16.51,"reason":"突破型信号，建议现价附近顺势介入，不必等回调"})'>+加入</button></td>
             </tr><tr>
               <td><span class="sname">TCL科技</span><br><span class="scode">000100</span></td>
               <td style="font-weight:700">5.82</td>
@@ -88,6 +109,7 @@
               <td>665640万</td>
               <td><span class="sig-tag">海龟突破</span></td>
               <td style="color:#22c55e;font-weight:700">115</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({"code":"000100","name":"TCL科技","price":5.82,"entry":5.82,"reason":"突破型信号，建议现价附近顺势介入，不必等回调"})'>+加入</button></td>
             </tr><tr>
               <td><span class="sname">国泰海通</span><br><span class="scode">601211</span></td>
               <td style="font-weight:700">18.2</td>
@@ -95,6 +117,7 @@
               <td>231873万</td>
               <td><span class="sig-tag">海龟突破</span></td>
               <td style="color:#22c55e;font-weight:700">115</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({"code":"601211","name":"国泰海通","price":18.2,"entry":18.2,"reason":"突破型信号，建议现价附近顺势介入，不必等回调"})'>+加入</button></td>
             </tr><tr>
               <td><span class="sname">滨化股份</span><br><span class="scode">601678</span></td>
               <td style="font-weight:700">6.59</td>
@@ -102,6 +125,7 @@
               <td>163233万</td>
               <td><span class="sig-tag">RPS强势</span></td>
               <td style="color:#22c55e;font-weight:700">115</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({"code":"601678","name":"滨化股份","price":6.59,"entry":6.38,"reason":"强势股，建议等回踩MA5（6.38）再介入，避免追高"})'>+加入</button></td>
             </tr><tr>
               <td><span class="sname">沃森生物</span><br><span class="scode">300142</span></td>
               <td style="font-weight:700">12.99</td>
@@ -109,6 +133,7 @@
               <td>99962万</td>
               <td><span class="sig-tag">海龟突破</span></td>
               <td style="color:#22c55e;font-weight:700">115</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({"code":"300142","name":"沃森生物","price":12.99,"entry":12.99,"reason":"突破型信号，建议现价附近顺势介入，不必等回调"})'>+加入</button></td>
             </tr><tr>
               <td><span class="sname">爱旭股份</span><br><span class="scode">600732</span></td>
               <td style="font-weight:700">13.85</td>
@@ -116,6 +141,7 @@
               <td>94728万</td>
               <td><span class="sig-tag">海龟突破</span></td>
               <td style="color:#22c55e;font-weight:700">115</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({"code":"600732","name":"爱旭股份","price":13.85,"entry":13.85,"reason":"突破型信号，建议现价附近顺势介入，不必等回调"})'>+加入</button></td>
             </tr><tr>
               <td><span class="sname">苏州固锝</span><br><span class="scode">002079</span></td>
               <td style="font-weight:700">15.03</td>
@@ -123,6 +149,7 @@
               <td>89072万</td>
               <td><span class="sig-tag">RPS强势</span></td>
               <td style="color:#22c55e;font-weight:700">115</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({"code":"002079","name":"苏州固锝","price":15.03,"entry":14.49,"reason":"强势股，建议等回踩MA5（14.49）再介入，避免追高"})'>+加入</button></td>
             </tr><tr>
               <td><span class="sname">儒意电影</span><br><span class="scode">002739</span></td>
               <td style="font-weight:700">9.6</td>
@@ -130,6 +157,7 @@
               <td>70467万</td>
               <td><span class="sig-tag">海龟突破</span></td>
               <td style="color:#22c55e;font-weight:700">115</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({"code":"002739","name":"儒意电影","price":9.6,"entry":9.6,"reason":"突破型信号，建议现价附近顺势介入，不必等回调"})'>+加入</button></td>
             </tr><tr>
               <td><span class="sname">创维数字</span><br><span class="scode">000810</span></td>
               <td style="font-weight:700">13.25</td>
@@ -137,6 +165,7 @@
               <td>53501万</td>
               <td><span class="sig-tag">海龟突破</span></td>
               <td style="color:#22c55e;font-weight:700">115</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({"code":"000810","name":"创维数字","price":13.25,"entry":13.25,"reason":"突破型信号，建议现价附近顺势介入，不必等回调"})'>+加入</button></td>
             </tr><tr>
               <td><span class="sname">希荻微</span><br><span class="scode">688173</span></td>
               <td style="font-weight:700">19.14</td>
@@ -144,13 +173,15 @@
               <td>38791万</td>
               <td><span class="sig-tag">海龟突破</span></td>
               <td style="color:#22c55e;font-weight:700">115</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({"code":"688173","name":"希荻微","price":19.14,"entry":19.14,"reason":"突破型信号，建议现价附近顺势介入，不必等回调"})'>+加入</button></td>
             </tr><tr>
-              <td><span class="sname">TCL中环</span><br><span class="scode">002129</span></td>
-              <td style="font-weight:700">12.02</td>
-              <td style="color:#ef4444">↑ 10.92</td>
-              <td>557428万</td>
+              <td><span class="sname">旗滨集团</span><br><span class="scode">601636</span></td>
+              <td style="font-weight:700">10.23</td>
+              <td style="color:#ef4444">↑ 8.99</td>
+              <td>440563万</td>
               <td><span class="sig-tag">海龟突破</span><span class="sig-tag">均线放量</span><span class="sig-tag">RPS强势</span></td>
               <td style="color:#22c55e;font-weight:700">110</td>
+              <td><button class="add-pos-btn" onclick='openAddModal({"code":"601636","name":"旗滨集团","price":10.23,"entry":10.23,"reason":"突破型信号，建议现价附近顺势介入，不必等回调"})'>+加入</button></td>
             </tr></tbody>
   </table>
 </div>
@@ -171,8 +202,157 @@
   <div class="crit-item">▸ <b>RPS强势</b>：120日涨幅在候选池内排名前15%（欧奈尔相对强度体系）：+15分</div>
 </div>
 
-<a class="back-btn" href="report.html">← 返回持仓信号</a>
+<a class="back-btn" href="index.html">← 返回持仓信号</a>
 
 <div class="footer">仅供参考，不构成投资建议 · 据此操作风险自负</div>
+
+<!-- 加入持仓弹窗 -->
+<div class="modal-overlay" id="addModal" onclick="closeOnBackdrop(event)">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="addModalTitle">加入持仓</span>
+      <button class="modal-close" onclick="closeAddModal()">×</button>
+    </div>
+
+    <div class="reason-box" id="entryReason"></div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">建仓价（元，可调整）</label>
+        <input class="form-input" id="entryPrice" type="number" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">建仓数量（股）</label>
+        <input class="form-input" id="entryShares" type="number" step="100" placeholder="如：500">
+      </div>
+    </div>
+    <p style="font-size:11px;color:#9ca3af;margin:-6px 0 14px" id="cashHint"></p>
+
+    <button class="submit-btn" id="addSubmitBtn" onclick="submitAddPosition()">确认加入持仓</button>
+    <p style="font-size:11px;color:#b0b5c0;text-align:center;margin-top:10px">提交后约2-3分钟，刷新持仓页即可看到新卡片</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const REPO  = 'sadaviknjx-ctrl/quant-app';
+const BRANCH = 'main';
+const STOCKS_FILE = 'data/stocks.json';
+const WORKFLOW = 'update.yml';
+
+let pending = null;
+
+function showToast(msg, ms=3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display='none', ms);
+}
+
+async function openAddModal(stock) {
+  pending = stock;
+  document.getElementById('addModalTitle').textContent = `加入持仓：${stock.name}`;
+  document.getElementById('entryReason').textContent = stock.reason;
+  document.getElementById('entryPrice').value = stock.entry;
+  document.getElementById('entryShares').value = '';
+  document.getElementById('cashHint').textContent = '正在查询可用资金…';
+  document.getElementById('addModal').classList.add('open');
+
+  try {
+    const res = await fetch(`https://raw.githubusercontent.com/${REPO}/${BRANCH}/data/account.json?_=${Date.now()}`);
+    if (res.ok) {
+      const acc = await res.json();
+      const cash = acc.available_cash;
+      const suggestShares = Math.floor(cash * 0.18 / stock.entry / 100) * 100;
+      document.getElementById('cashHint').textContent =
+        `账户可用资金约${cash.toFixed(0)}元（${acc.date}）· 按单票≤18%仓位建议约${suggestShares}股，仅供参考`;
+      if (suggestShares >= 100) document.getElementById('entryShares').value = suggestShares;
+    } else {
+      document.getElementById('cashHint').textContent = '暂无可用资金数据，请自行填写股数';
+    }
+  } catch(e) {
+    document.getElementById('cashHint').textContent = '暂无可用资金数据，请自行填写股数';
+  }
+}
+
+function closeAddModal() {
+  document.getElementById('addModal').classList.remove('open');
+}
+function closeOnBackdrop(e) {
+  if (e.target === document.getElementById('addModal')) closeAddModal();
+}
+
+async function submitAddPosition() {
+  const entry  = parseFloat(document.getElementById('entryPrice').value);
+  const shares = parseInt(document.getElementById('entryShares').value);
+  if (!entry || entry <= 0) { showToast('请输入有效建仓价'); return; }
+  if (!shares || shares <= 0 || shares % 100 !== 0) { showToast('请输入100的整数倍股数'); return; }
+
+  let token = localStorage.getItem('gh_token');
+  if (!token) {
+    token = prompt('请输入 GitHub Personal Access Token（需要 repo 权限，只需输入一次）：');
+    if (!token) return;
+    localStorage.setItem('gh_token', token.trim());
+    token = token.trim();
+  }
+
+  const btn = document.getElementById('addSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = '提交中...';
+
+  const symbol = (pending.code.startsWith('6') ? 'sh' : 'sz') + pending.code;
+
+  async function fetchFile() {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${STOCKS_FILE}?ref=${BRANCH}&_=${Date.now()}`, {
+      cache: 'no-store',
+      headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }
+    });
+    if (!res.ok) throw new Error(`读取失败 (${res.status})`);
+    return res.json();
+  }
+
+  async function writeFile() {
+    const fileData = await fetchFile();
+    const stocks = JSON.parse(decodeURIComponent(escape(atob(fileData.content.replace(/\n/g,'')))));
+    stocks[pending.name] = { code: pending.code, symbol: symbol, hold: shares, cost: entry };
+    const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(stocks, null, 2))));
+    return fetch(`https://api.github.com/repos/${REPO}/contents/${STOCKS_FILE}`, {
+      method: 'PUT',
+      headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `position: add ${pending.name} ${shares}股@${entry}`,
+        content: newContent, sha: fileData.sha, branch: BRANCH
+      })
+    });
+  }
+
+  try {
+    let putRes = await writeFile();
+    if (putRes.status === 409) {
+      await new Promise(r => setTimeout(r, 800));
+      putRes = await writeFile();
+    }
+    if (!putRes.ok) {
+      const body = await putRes.json().catch(() => ({}));
+      throw new Error(`写入失败 (${putRes.status}): ${body.message || '未知错误'}`);
+    }
+
+    await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`, {
+      method: 'POST',
+      headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref: BRANCH })
+    });
+
+    showToast(`✓ ${pending.name} 已加入持仓！约2-3分钟后刷新持仓页查看`, 4000);
+    closeAddModal();
+  } catch(err) {
+    showToast('❌ ' + err.message, 4500);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '确认加入持仓';
+  }
+}
+</script>
 </body>
 </html>
