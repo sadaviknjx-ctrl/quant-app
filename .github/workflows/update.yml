@@ -7,10 +7,19 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   update:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -23,12 +32,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Update data and generate report
-        run: python scripts/generate_report.py
-
       - name: Generate stock screener
         run: python scripts/stock_screener.py
         timeout-minutes: 12
+
+      - name: Update data and generate report
+        run: python scripts/generate_report.py
 
       - name: Commit and push
         run: |
@@ -37,3 +46,15 @@ jobs:
           git add docs/ data/
           git diff --staged --quiet || git commit -m "chore: update report $(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M')"
           git push
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

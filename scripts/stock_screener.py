@@ -448,10 +448,24 @@ async function submitAddPosition() {{
     with open(out, 'w', encoding='utf-8') as f:
         f.write(html)
     print(f'选股报告已生成: {out}')
-    print(f'选股报告已生成: {out}')
+
+
+def save_results_json(results):
+    """落盘选股结果供 generate_report.py 读取，用于持仓页"建议轮动"功能"""
+    import json
+    out = os.path.join(DATA, 'screener_results.json')
+    payload = {
+        'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M'),
+        'results': results,
+    }
+    with open(out, 'w', encoding='utf-8') as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    print(f'选股结果已落盘: {out}')
+
 
 if __name__ == '__main__':
     print('开始选股筛选，预计需要5–10分钟（逐只拉取历史数据）...')
     results = screen()
     print(f'\n筛选完成，共 {len(results)} 只股票入选')
     build_html(results)
+    save_results_json(results)

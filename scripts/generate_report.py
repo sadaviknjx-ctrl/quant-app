@@ -134,15 +134,18 @@ def calc_signals(cfg):
     vol_desc = f'放量 {vol_ratio:.1f}x' if vol_ratio > 1.5 else ('缩量' if vol_ratio < 0.7 else f'正常 {vol_ratio:.1f}x')
 
     warnings = []
+    rotation_flag = False  # 真正"该考虑换股"的信号，区别于"强势但暂停做T"（那是建议继续持有，不是清仓信号）
     below_ma20 = int((close.tail(5) < ma20.tail(5)).sum())
     if below_ma20 >= 5:
         warnings.append(('red', '连续5日低于MA20，趋势持续走弱，暂停做T'))
+        rotation_flag = True
     elif below_ma20 >= 3:
         warnings.append(('orange', f'近5日有{below_ma20}天低于MA20，谨慎操作'))
 
     if cost > 0 and profit_pct is not None:
         if profit_pct < -10:
             warnings.append(('red', f'浮亏已达{profit_pct:.1f}%，建议考虑止损换股'))
+            rotation_flag = True
         elif profit_pct < -5:
             warnings.append(('orange', f'浮亏{profit_pct:.1f}%，关注止损线'))
 
@@ -177,7 +180,7 @@ def calc_signals(cfg):
         't_shares': t_shares, 'advice': advice,
         'stop_shares': stop_shares, 'stop_reduce_pct': stop_reduce_pct,
         'hold': cfg['hold'], 'code': cfg['code'],
-        'warnings': warnings, 'strong_trend': strong_trend,
+        'warnings': warnings, 'strong_trend': strong_trend, 'rotation_flag': rotation_flag,
     }
 
 def stock_card(name, s, today_md):
@@ -389,6 +392,20 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 .token-hint{font-size:11px;color:#b0b5c0;text-align:center;margin-top:10px;line-height:1.6}
 .toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:200;display:none;white-space:nowrap}
 
+/* ── Rotation suggestion ── */
+.rotate-item{background:#fafafa;border-radius:10px;padding:12px;margin-bottom:10px}
+.rotate-item:last-child{margin-bottom:0}
+.rotate-held{font-size:12px;color:#cf1322;font-weight:500;margin-bottom:6px}
+.rotate-empty{font-size:12px;color:#9ca3af}
+.rotate-arrow{font-size:11px;color:#9ca3af;text-align:center;margin-bottom:6px}
+.rotate-pick{background:#fff;border:1px solid #b7eb8f;border-radius:8px;padding:10px}
+.rotate-pick-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.rotate-pick-name{font-size:13px;font-weight:600;color:#1a1d23}
+.rotate-pick-score{font-size:12px;font-weight:700;color:#22c55e}
+.rotate-pick-tags{margin-bottom:6px}
+.rotate-pick-entry{font-size:12px;color:#5a6072;line-height:1.5}
+.sig-tag{display:inline-block;background:#e8f4ff;color:#0958d9;border-radius:4px;padding:1px 5px;font-size:10px;margin:1px}
+
 /* ── Screener btn ── */
 .screener-btn{display:block;text-align:center;padding:13px;background:#1677ff;color:#fff;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;margin-bottom:14px;letter-spacing:.02em}
 
@@ -524,6 +541,73 @@ def trade_stats_html(stats):
   <button class="add-trade-btn" onclick="openTradeModal()">＋ 记录一笔交易</button>
 </div>"""
 
+SCREENER_RESULTS_JSON = os.path.join(DATA, 'screener_results.json')
+
+def load_screener_results():
+    if not os.path.exists(SCREENER_RESULTS_JSON):
+        return []
+    try:
+        with open(SCREENER_RESULTS_JSON, encoding='utf-8') as f:
+            payload = json.load(f)
+        return payload.get('results', [])
+    except Exception:
+        return []
+
+def build_rotation_suggestions(signals):
+    """对有红色预警的持仓，从今日选股结果里推荐一个轮动候选（候选不能是已持有的股票，且每个候选只推荐一次）"""
+    candidates = load_screener_results()
+    held_codes = {cfg['code'] for cfg in STOCKS.values()}
+    available = [c for c in candidates if c['code'] not in held_codes]
+
+    suggestions = []
+    used_codes = set()
+    for name, s in signals.items():
+        if not s.get('rotation_flag'):
+            continue
+        # 只取真正代表走弱的红色预警，排除"强势趋势暂停做T"（那是持有建议，不是清仓信号）
+        weak_msgs = [msg for level, msg in s['warnings'] if level == 'red' and ('换股' in msg or '走弱' in msg)]
+        if not weak_msgs:
+            continue
+        pick = next((c for c in available if c['code'] not in used_codes), None)
+        if pick is None:
+            suggestions.append({'held_name': name, 'held_reason': weak_msgs[0], 'pick': None})
+            continue
+        used_codes.add(pick['code'])
+        suggestions.append({'held_name': name, 'held_reason': weak_msgs[0], 'pick': pick})
+    return suggestions
+
+def rotation_html(suggestions):
+    if not suggestions:
+        return ''
+    items = ''
+    for sug in suggestions:
+        if sug['pick'] is None:
+            items += f"""<div class="rotate-item">
+        <div class="rotate-held">⚠️ {sug['held_name']}：{sug['held_reason']}</div>
+        <div class="rotate-empty">今日选股池暂无合适接替候选</div>
+      </div>"""
+        else:
+            p = sug['pick']
+            sig_tags = ''.join(f'<span class="sig-tag">{x}</span>' for x in p['signals']) or ''
+            items += f"""<div class="rotate-item">
+        <div class="rotate-held">⚠️ {sug['held_name']}：{sug['held_reason']}</div>
+        <div class="rotate-arrow">↓ 建议关注</div>
+        <div class="rotate-pick">
+          <div class="rotate-pick-top">
+            <span class="rotate-pick-name">{p['name']} <span class="stock-code">{p['code']}</span></span>
+            <span class="rotate-pick-score">评分{p['score']}</span>
+          </div>
+          <div class="rotate-pick-tags">{sig_tags}</div>
+          <div class="rotate-pick-entry">建议介入价 <b>{p['entry_price']}</b> · {p['entry_reason']}</div>
+        </div>
+      </div>"""
+
+    return f"""<div class="card">
+  <p class="section-title">⚡ 持仓轮动建议</p>
+  <p style="font-size:11px;color:#9ca3af;margin-bottom:12px">基于今日选股结果自动匹配，仅供参考，不构成投资建议</p>
+  {items}
+</div>"""
+
 def generate():
     update_data()
     now = datetime.now()
@@ -549,6 +633,9 @@ def generate():
         else:
             cards += f'<div class="card"><p style="color:#f5222d">{name} 加载失败: {errors[name]}</p></div>'
 
+    rotation_suggestions = build_rotation_suggestions(signals)
+    rotation_card = rotation_html(rotation_suggestions)
+
     html = f"""<!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -565,6 +652,8 @@ def generate():
 </div>
 
 {cards}
+
+{rotation_card}
 
 <div class="card">
   <p class="section-title">今日操作流程</p>

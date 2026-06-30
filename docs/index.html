@@ -146,6 +146,20 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 .token-hint{font-size:11px;color:#b0b5c0;text-align:center;margin-top:10px;line-height:1.6}
 .toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:200;display:none;white-space:nowrap}
 
+/* ── Rotation suggestion ── */
+.rotate-item{background:#fafafa;border-radius:10px;padding:12px;margin-bottom:10px}
+.rotate-item:last-child{margin-bottom:0}
+.rotate-held{font-size:12px;color:#cf1322;font-weight:500;margin-bottom:6px}
+.rotate-empty{font-size:12px;color:#9ca3af}
+.rotate-arrow{font-size:11px;color:#9ca3af;text-align:center;margin-bottom:6px}
+.rotate-pick{background:#fff;border:1px solid #b7eb8f;border-radius:8px;padding:10px}
+.rotate-pick-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.rotate-pick-name{font-size:13px;font-weight:600;color:#1a1d23}
+.rotate-pick-score{font-size:12px;font-weight:700;color:#22c55e}
+.rotate-pick-tags{margin-bottom:6px}
+.rotate-pick-entry{font-size:12px;color:#5a6072;line-height:1.5}
+.sig-tag{display:inline-block;background:#e8f4ff;color:#0958d9;border-radius:4px;padding:1px 5px;font-size:10px;margin:1px}
+
 /* ── Screener btn ── */
 .screener-btn{display:block;text-align:center;padding:13px;background:#1677ff;color:#fff;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;margin-bottom:14px;letter-spacing:.02em}
 
@@ -155,7 +169,7 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 <body>
 <h1>做T辅助信号</h1>
 <div class="sub-row">
-  <p class="sub">更新于 2026-06-30 20:53 &nbsp;·&nbsp; 工作日 17:30 自动刷新</p>
+  <p class="sub">更新于 2026-06-30 22:45 &nbsp;·&nbsp; 工作日 17:30 自动刷新</p>
   <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">🔄 立即刷新</button>
 </div>
 
@@ -339,6 +353,15 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
   </div>
 
   <div class="advice advice-neutral">正常震荡，按挂单价位操作即可</div>
+</div>
+
+<div class="card">
+  <p class="section-title">⚡ 持仓轮动建议</p>
+  <p style="font-size:11px;color:#9ca3af;margin-bottom:12px">基于今日选股结果自动匹配，仅供参考，不构成投资建议</p>
+  <div class="rotate-item">
+        <div class="rotate-held">⚠️ 华远控股：连续5日低于MA20，趋势持续走弱，暂停做T</div>
+        <div class="rotate-empty">今日选股池暂无合适接替候选</div>
+      </div>
 </div>
 
 <div class="card">
