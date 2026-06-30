@@ -11,11 +11,36 @@ DATA   = os.path.join(ROOT, 'data')
 DOCS   = os.path.join(ROOT, 'docs')
 os.makedirs(DOCS, exist_ok=True)
 
-STOCKS_JSON = os.path.join(DATA, 'stocks.json')
+STOCKS_JSON        = os.path.join(DATA, 'stocks.json')
+STOCKS_JSON_BACKUP = os.path.join(DATA, 'stocks.backup.json')
+
+def _validate_stocks(data):
+    if not isinstance(data, dict) or not data:
+        raise ValueError('stocks.json 内容不是非空字典')
+    for name, cfg in data.items():
+        for key in ('code', 'symbol', 'hold', 'cost'):
+            if key not in cfg:
+                raise ValueError(f'{name} 缺少字段 {key}')
 
 def load_stocks():
-    with open(STOCKS_JSON, encoding='utf-8') as f:
-        return json.load(f)
+    """主文件解析失败时（如并发写入导致JSON损坏）自动回退到最近一次成功加载的备份，
+    避免单次写入异常导致当天网站完全无法更新。"""
+    try:
+        with open(STOCKS_JSON, encoding='utf-8') as f:
+            data = json.load(f)
+        _validate_stocks(data)
+        with open(STOCKS_JSON_BACKUP, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return data
+    except Exception as e:
+        print(f'警告: stocks.json 加载失败（{e}），尝试使用备份文件...')
+        if os.path.exists(STOCKS_JSON_BACKUP):
+            with open(STOCKS_JSON_BACKUP, encoding='utf-8') as f:
+                data = json.load(f)
+            _validate_stocks(data)
+            print('已使用备份配置，今日持仓数据可能不是最新的，请检查 stocks.json')
+            return data
+        raise RuntimeError('stocks.json 损坏且无可用备份，无法生成报告') from e
 
 STOCKS = load_stocks()
 
