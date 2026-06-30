@@ -2,12 +2,3 @@ venv/
 __pycache__/
 *.pyc
 .DS_Store
-report.html
-strategy_boll.py
-daily_signal.py
-update_and_report.sh
-/screener.html
-# 历史遗留数据文件（不追踪）
-510300.csv
-600881.csv
-# 追踪 data/*.csv（持仓行情 + 交易记录）

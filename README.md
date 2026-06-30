@@ -1,16 +1,32 @@
-# React + Vite
+# 量化A股助手
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+个人化的A股做T辅助工具，网站：[quant.sugaryu.xyz](https://quant.sugaryu.xyz)
 
-Currently, two official plugins are available:
+## 功能
+- **做T辅助信号**：每个交易日17:30自动更新，给持仓股票计算高抛/低吸/止损挂单价
+- **强势持有识别**：120日涨幅超过30%的持仓自动切换为"持有为主"模式，不建议做T（基于历史回测）
+- **选股推荐**：接入开源项目 [Sequoia-X](https://github.com/sngyai/Sequoia) 的海龟突破、RPS强势、均线放量三种技术信号
+- **做T战绩统计**：网页直接录入每笔高抛/低吸交易，自动统计胜率和收益
+- **持仓自动同步**：通过 Cowork 定时任务读取同花顺客户端真实持仓，自动更新到网站配置
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 目录结构
+```
+scripts/
+  generate_report.py       主报告生成（持仓信号 + 做T战绩）
+  stock_screener.py        选股推荐
+  backtest_t_strategy.py   做T信号策略回测工具
+  add_trade.py             命令行录入交易（备用，主要用网页弹窗）
+docs/                       GitHub Pages 静态站点输出目录
+data/                       行情历史数据 + 交易记录
+.github/workflows/          GitHub Actions 自动更新任务
+```
 
-## React Compiler
+## 本地运行
+```bash
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+python scripts/generate_report.py
+python scripts/stock_screener.py
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+仅供个人参考，不构成投资建议。

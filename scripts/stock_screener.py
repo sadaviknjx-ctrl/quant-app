@@ -177,7 +177,7 @@ def build_html(results):
         rows = ''
         for r in results:
             trend_color = '#ef4444' if r['trend'] == '↑' else ('#22c55e' if r['trend'] == '↓' else '#94a3b8')
-            score_color = '#22c55e' if r['score'] >= 70 else ('#f59e0b' if r['score'] >= 50 else '#94a3b8')
+            score_color = '#22c55e' if r['score'] >= 100 else ('#f59e0b' if r['score'] >= 70 else '#94a3b8')
             signal_html = ''.join(f'<span class="sig-tag">{s}</span>' for s in r['signals']) or '<span class="sig-none">—</span>'
             rows += f"""<tr>
               <td><span class="sname">{r['name']}</span><br><span class="scode">{r['code']}</span></td>
@@ -246,7 +246,7 @@ def build_html(results):
   <div class="crit-item">▸ 现价 &gt; MA5（站上短期均线）：+20分</div>
   <div class="crit-item">▸ 日均波幅在3%–6%（最佳做T区间）：+30分</div>
   <div class="crit-item">▸ 量比在0.8x–2.0x（量能稳定）：+20分</div>
-  <div class="crit-item" style="color:#f59e0b">▸ 评分≥70为优先关注，仅供参考</div>
+  <div class="crit-item" style="color:#f59e0b">▸ 评分满分140（基础100 + 技术信号加分），≥100为优先关注，仅供参考</div>
 </div>
 
 <div class="criteria">

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""每次做T后运行此脚本快速录入交易记录"""
-import csv, os
+"""命令行录入交易（备用工具，主要交易录入走网页弹窗）"""
+import csv, os, sys
 from datetime import datetime
 
 ROOT       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TRADES_CSV = os.path.join(ROOT, 'data', 'trades.csv')
 
-STOCKS = ['三峡新材', '京东方A', '华远控股', '铜陵有色']
+sys.path.insert(0, os.path.join(ROOT, 'scripts'))
+from generate_report import STOCKS as STOCKS_CFG  # 复用同一份持仓配置，避免股票列表脱节
+
+STOCKS = list(STOCKS_CFG.keys())
 
 def ask(prompt, valid=None):
     while True:
@@ -72,7 +75,7 @@ def main():
 
     print(f'✓ 已写入 {TRADES_CSV}')
     print('\n更新报告请运行:')
-    print('  python3.11 scripts/generate_report.py && git add data/docs && git commit -m "trade: update" && git push')
+    print('  python scripts/generate_report.py && git add data/ docs/ && git commit -m "trade: update" && git push')
 
 if __name__ == '__main__':
     main()
