@@ -109,6 +109,21 @@ def calc_signals(cfg):
             pct_120 = (last_close - base) / base
     strong_trend = pct_120 is not None and pct_120 > 0.30
 
+    # 强势持有股的加仓建议：以MA10为回踩支撑位，现价越贴近/跌破MA10越值得加仓；
+    # 现价明显高于布林上轨视为超买延伸，不建议追加
+    add_entry = round(ma10_v, 2)
+    overextended = last_close > boll_up
+    near_support = last_close <= add_entry * 1.02
+    if overextended:
+        add_recommend = False
+        add_reason = f'现价已高于布林上轨，处于超买延伸阶段，不建议追加，等回踩至 {add_entry:.2f}（MA10）附近再看'
+    elif near_support:
+        add_recommend = True
+        add_reason = f'现价已贴近MA10支撑位 {add_entry:.2f}，是较合理的加仓点位'
+    else:
+        add_recommend = False
+        add_reason = f'现价距MA10支撑位 {add_entry:.2f} 尚有距离，暂不建议追加，等回踩后再加仓'
+
     cost = cfg['cost']
     if cost <= 0:
         profit_pct   = None
@@ -181,6 +196,7 @@ def calc_signals(cfg):
         'stop_shares': stop_shares, 'stop_reduce_pct': stop_reduce_pct,
         'hold': cfg['hold'], 'code': cfg['code'],
         'warnings': warnings, 'strong_trend': strong_trend, 'rotation_flag': rotation_flag,
+        'add_entry': add_entry, 'add_recommend': add_recommend, 'add_reason': add_reason,
     }
 
 def stock_card(name, s, today_md):
@@ -245,6 +261,11 @@ def stock_card(name, s, today_md):
   </div>''' if not s['strong_trend'] else f'''<div class="hold-only-box">
     <div class="hold-only-title">📈 强势持有模式</div>
     <div class="hold-only-desc">该股处于强势上升趋势，回测显示做T会跑输持有不动。暂不提供挂单建议，止损价仍供风控参考：<b>{s['stop']:.2f}</b>（触发减仓{s['stop_reduce_pct']}% ≈ {s['stop_shares']}股）</div>
+    <div class="add-pos-row add-pos-{'yes' if s['add_recommend'] else 'no'}">
+      <span class="add-pos-label">{'✅ 建议加仓' if s['add_recommend'] else '⏸ 暂不建议加仓'}</span>
+      <span class="add-pos-price">参考位 {s['add_entry']:.2f}</span>
+    </div>
+    <div class="add-pos-reason">{s['add_reason']}</div>
   </div>'''}
 
   <div class="advice advice-{s['advice'][0]}">{s['advice'][1]}</div>
@@ -282,6 +303,12 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 .hold-only-box{background:#f6ffed;border:1px solid #b7eb8f;border-radius:10px;padding:12px}
 .hold-only-title{font-size:13px;font-weight:600;color:#389e0d;margin-bottom:5px}
 .hold-only-desc{font-size:12px;color:#5a6072;line-height:1.6}
+.add-pos-row{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed #b7eb8f}
+.add-pos-label{font-size:12px;font-weight:600}
+.add-pos-yes .add-pos-label{color:#389e0d}
+.add-pos-no .add-pos-label{color:#8a8f9b}
+.add-pos-price{font-size:13px;font-weight:700;color:#1a1d23}
+.add-pos-reason{font-size:11px;color:#9ca3af;margin-top:4px;line-height:1.5}
 
 /* ── Warnings ── */
 .warn{font-size:12px;padding:7px 10px;border-radius:8px;margin-bottom:8px;font-weight:500}
