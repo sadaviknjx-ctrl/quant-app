@@ -1,0 +1,46 @@
+{
+  "error_code": "0",
+  "error_msg": "success",
+  "ex_data": {
+    "money_remain": "3365.5800",
+    "position": [
+      {
+        "code": "000630",
+        "cost": "7.7230",
+        "count": "100",
+        "name": "铜陵有色",
+        "price": "6.29",
+        "value": "629.00"
+      },
+      {
+        "code": "000751",
+        "cost": "6.3000",
+        "count": "100",
+        "name": "锌业股份",
+        "price": "6.20",
+        "value": "620.00"
+      },
+      {
+        "code": "600743",
+        "cost": "1.1440",
+        "count": "1400",
+        "name": "华远控股",
+        "price": "2.20",
+        "value": "3080.00"
+      },
+      {
+        "code": "000725",
+        "cost": "6.3400",
+        "count": "700",
+        "name": "京东方A",
+        "price": "8.77",
+        "value": "6139.00"
+      }
+    ],
+    "position_rate": "0.7567",
+    "total_asset": "13833.5800",
+    "total_liability": "0",
+    "total_value": "10468.00",
+    "upload_time": "1782903169000"
+  }
+}
