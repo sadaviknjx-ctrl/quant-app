@@ -366,6 +366,22 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 .trade-buy{color:#00a854}
 .trade-detail{color:#8a8f9b;margin-left:auto}
 
+/* ── Account overview card ── */
+.acct-summary{margin-bottom:10px}
+.acct-main{display:flex;flex-direction:column;gap:2px}
+.acct-assets{font-size:22px;font-weight:700;color:#1a1d23;letter-spacing:-.3px}
+.acct-pnl{font-size:13px;font-weight:500}
+.acct-rows{display:flex;flex-direction:column;gap:6px;margin-bottom:4px}
+.acct-row{display:flex;justify-content:space-between;font-size:13px}
+.acct-l{color:#8a8f9b}
+.acct-v{font-weight:500;color:#1a1d23}
+.pos-bar-item{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:12px}
+.pos-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block}
+.pos-bar-label{width:72px;display:flex;align-items:center;gap:4px;color:#5a6072;flex-shrink:0}
+.pos-bar-track{flex:1;height:6px;background:#f0f2f5;border-radius:3px;overflow:hidden}
+.pos-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.pos-bar-pct{width:36px;text-align:right;color:#8a8f9b;flex-shrink:0}
+
 /* ── Add trade button ── */
 .add-trade-btn{width:100%;margin-top:12px;padding:11px;background:#f0f7ff;color:#1677ff;border:1.5px dashed #91caff;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.02em}
 .add-trade-btn:active{background:#e6f0ff}
@@ -443,9 +459,10 @@ def calc_trade_stats(trades):
             profit += p
             if p > 0:
                 win += 1
-        stats_by_stock[stock] = {'pairs': pairs, 'win': win, 'profit': round(profit, 2)}
+        win_rate = win / pairs * 100 if pairs > 0 else None
+        stats_by_stock[stock] = {'pairs': pairs, 'win': win, 'profit': round(profit, 2), 'win_rate': win_rate}
 
-    total_pairs  = sum(v['pairs']  for v in stats_by_stock.values())
+    total_pairs  = sum(v['pairs'] for v in stats_by_stock.values())
     total_win    = sum(v['win']    for v in stats_by_stock.values())
     total_profit = sum(v['profit'] for v in stats_by_stock.values())
     win_rate = total_win / total_pairs * 100 if total_pairs > 0 else 0
@@ -462,6 +479,21 @@ def calc_trade_stats(trades):
         'recent': recent,
         'last_date': trades['date'].max().strftime('%Y-%m-%d'),
     }
+
+def trade_feedback_warnings(trade_stat, stock_name):
+    """根据历史做T记录给单只股票生成反馈预警，注入到持仓卡片的warnings列表"""
+    if not trade_stat or stock_name not in trade_stat['by_stock']:
+        return []
+    s = trade_stat['by_stock'][stock_name]
+    pairs, wr = s['pairs'], s['win_rate']
+    if pairs < 3 or wr is None:
+        return []  # 样本太少，不下结论
+    warnings = []
+    if wr < 40:
+        warnings.append(('red', f'历史{pairs}次做T胜率仅{wr:.0f}%，建议本周暂停该股做T，观察规律再操作'))
+    elif wr < 60:
+        warnings.append(('orange', f'历史{pairs}次做T胜率{wr:.0f}%，略低，做T时建议适当收窄仓位'))
+    return warnings
 
 def trade_stats_html(stats):
     if stats is None:
@@ -608,6 +640,53 @@ def rotation_html(suggestions):
   {items}
 </div>"""
 
+def account_card_html(market_val, cash, total_assets, total_pnl, total_pnl_pct, signals, stocks):
+    pnl_color = '#00a854' if total_pnl >= 0 else '#f5222d'
+    pnl_sign  = '+' if total_pnl >= 0 else ''
+
+    # 可用资金行
+    cash_row = f'<div class="acct-row"><span class="acct-l">可用资金</span><span class="acct-v">{cash:,.2f} 元</span></div>' if cash is not None \
+        else '<div class="acct-row"><span class="acct-l">可用资金</span><span class="acct-v" style="color:#b0b5c0">待同步</span></div>'
+
+    # 总资产行
+    assets_str = f'{total_assets:,.2f} 元' if cash is not None else f'{market_val:,.2f} 元（未含可用资金）'
+
+    # 仓位占比条形图
+    pos_bars = ''
+    total_for_pct = total_assets if (cash is not None and total_assets > 0) else market_val
+    COLORS = ['#1677ff','#00a854','#fa8c16','#722ed1','#eb2f96','#13c2c2']
+    for i, (name, cfg) in enumerate(stocks.items()):
+        if name not in signals:
+            continue
+        val = signals[name]['last_close'] * cfg['hold']
+        pct = val / total_for_pct * 100 if total_for_pct > 0 else 0
+        color = COLORS[i % len(COLORS)]
+        pos_bars += f'<div class="pos-bar-item"><div class="pos-bar-label"><span class="pos-dot" style="background:{color}"></span>{name}</div>' \
+                    f'<div class="pos-bar-track"><div class="pos-bar-fill" style="width:{pct:.1f}%;background:{color}"></div></div>' \
+                    f'<span class="pos-bar-pct">{pct:.1f}%</span></div>'
+    if cash is not None and total_for_pct > 0:
+        cash_pct = cash / total_for_pct * 100
+        pos_bars += f'<div class="pos-bar-item"><div class="pos-bar-label"><span class="pos-dot" style="background:#8c8c8c"></span>可用资金</div>' \
+                    f'<div class="pos-bar-track"><div class="pos-bar-fill" style="width:{cash_pct:.1f}%;background:#8c8c8c"></div></div>' \
+                    f'<span class="pos-bar-pct">{cash_pct:.1f}%</span></div>'
+
+    return f"""<div class="card">
+  <p class="section-title">账户总览</p>
+  <div class="acct-summary">
+    <div class="acct-main">
+      <span class="acct-assets">{assets_str}</span>
+      <span class="acct-pnl" style="color:{pnl_color}">{pnl_sign}{total_pnl:,.2f}元 ({pnl_sign}{total_pnl_pct:.1f}%)</span>
+    </div>
+  </div>
+  <div class="acct-rows">
+    <div class="acct-row"><span class="acct-l">持仓市值</span><span class="acct-v">{market_val:,.2f} 元</span></div>
+    {cash_row}
+  </div>
+  <div class="divider"></div>
+  <p style="font-size:11px;color:#9ca3af;margin-bottom:8px">仓位占比</p>
+  {pos_bars}
+</div>"""
+
 def generate():
     update_data()
     now = datetime.now()
@@ -621,6 +700,21 @@ def generate():
     trades     = load_trades()
     trade_stat = calc_trade_stats(trades)
 
+    # ── 账户总览 ──
+    import json as _json
+    acct_path = os.path.join(DATA, 'account.json')
+    cash = None
+    if os.path.exists(acct_path):
+        try:
+            cash = _json.load(open(acct_path)).get('cash')
+        except Exception:
+            pass
+    market_val = sum(signals[n]['last_close'] * STOCKS[n]['hold'] for n in signals)
+    total_cost  = sum(STOCKS[n]['cost'] * STOCKS[n]['hold'] for n in signals if STOCKS[n]['cost'] > 0)
+    total_assets = market_val + (cash or 0)
+    total_pnl    = market_val - total_cost
+    total_pnl_pct = total_pnl / total_cost * 100 if total_cost > 0 else 0
+
     today_md = now.strftime('%m-%d')
     STOCK_BUTTONS_HTML = ''.join(
         '<button class="seg-btn" onclick="selectStock(this,\'' + name + '\')">' + name + '</button>'
@@ -629,6 +723,8 @@ def generate():
     cards = ''
     for name, cfg in STOCKS.items():
         if name in signals:
+            # 把做T历史反馈预警注入到卡片warnings里
+            signals[name]['warnings'] += trade_feedback_warnings(trade_stat, name)
             cards += stock_card(name, signals[name], today_md)
         else:
             cards += f'<div class="card"><p style="color:#f5222d">{name} 加载失败: {errors[name]}</p></div>'
@@ -650,6 +746,8 @@ def generate():
   <p class="sub">更新于 {now.strftime('%Y-%m-%d %H:%M')} &nbsp;·&nbsp; 工作日 17:30 自动刷新</p>
   <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">🔄 立即刷新</button>
 </div>
+
+{account_card_html(market_val, cash, total_assets, total_pnl, total_pnl_pct, signals, STOCKS)}
 
 {cards}
 

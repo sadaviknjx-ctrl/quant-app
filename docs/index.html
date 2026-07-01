@@ -120,6 +120,22 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 .trade-buy{color:#00a854}
 .trade-detail{color:#8a8f9b;margin-left:auto}
 
+/* ── Account overview card ── */
+.acct-summary{margin-bottom:10px}
+.acct-main{display:flex;flex-direction:column;gap:2px}
+.acct-assets{font-size:22px;font-weight:700;color:#1a1d23;letter-spacing:-.3px}
+.acct-pnl{font-size:13px;font-weight:500}
+.acct-rows{display:flex;flex-direction:column;gap:6px;margin-bottom:4px}
+.acct-row{display:flex;justify-content:space-between;font-size:13px}
+.acct-l{color:#8a8f9b}
+.acct-v{font-weight:500;color:#1a1d23}
+.pos-bar-item{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:12px}
+.pos-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block}
+.pos-bar-label{width:72px;display:flex;align-items:center;gap:4px;color:#5a6072;flex-shrink:0}
+.pos-bar-track{flex:1;height:6px;background:#f0f2f5;border-radius:3px;overflow:hidden}
+.pos-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.pos-bar-pct{width:36px;text-align:right;color:#8a8f9b;flex-shrink:0}
+
 /* ── Add trade button ── */
 .add-trade-btn{width:100%;margin-top:12px;padding:11px;background:#f0f7ff;color:#1677ff;border:1.5px dashed #91caff;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.02em}
 .add-trade-btn:active{background:#e6f0ff}
@@ -169,8 +185,25 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 <body>
 <h1>做T辅助信号</h1>
 <div class="sub-row">
-  <p class="sub">更新于 2026-07-01 00:20 &nbsp;·&nbsp; 工作日 17:30 自动刷新</p>
+  <p class="sub">更新于 2026-07-01 09:14 &nbsp;·&nbsp; 工作日 17:30 自动刷新</p>
   <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">🔄 立即刷新</button>
+</div>
+
+<div class="card">
+  <p class="section-title">账户总览</p>
+  <div class="acct-summary">
+    <div class="acct-main">
+      <span class="acct-assets">9,676.00 元（未含可用资金）</span>
+      <span class="acct-pnl" style="color:#00a854">+2,865.00元 (+42.1%)</span>
+    </div>
+  </div>
+  <div class="acct-rows">
+    <div class="acct-row"><span class="acct-l">持仓市值</span><span class="acct-v">9,676.00 元</span></div>
+    <div class="acct-row"><span class="acct-l">可用资金</span><span class="acct-v" style="color:#b0b5c0">待同步</span></div>
+  </div>
+  <div class="divider"></div>
+  <p style="font-size:11px;color:#9ca3af;margin-bottom:8px">仓位占比</p>
+  <div class="pos-bar-item"><div class="pos-bar-label"><span class="pos-dot" style="background:#1677ff"></span>京东方A</div><div class="pos-bar-track"><div class="pos-bar-fill" style="width:35.9%;background:#1677ff"></div></div><span class="pos-bar-pct">35.9%</span></div><div class="pos-bar-item"><div class="pos-bar-label"><span class="pos-dot" style="background:#00a854"></span>华远控股</div><div class="pos-bar-track"><div class="pos-bar-fill" style="width:44.6%;background:#00a854"></div></div><span class="pos-bar-pct">44.6%</span></div><div class="pos-bar-item"><div class="pos-bar-label"><span class="pos-dot" style="background:#fa8c16"></span>铜陵有色</div><div class="pos-bar-track"><div class="pos-bar-fill" style="width:13.1%;background:#fa8c16"></div></div><span class="pos-bar-pct">13.1%</span></div><div class="pos-bar-item"><div class="pos-bar-label"><span class="pos-dot" style="background:#722ed1"></span>锌业股份</div><div class="pos-bar-track"><div class="pos-bar-fill" style="width:6.3%;background:#722ed1"></div></div><span class="pos-bar-pct">6.3%</span></div>
 </div>
 
 <div class="card stock-card">
