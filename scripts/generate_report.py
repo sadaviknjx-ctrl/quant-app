@@ -430,6 +430,25 @@ h1{font-size:19px;font-weight:600;color:#1a1d23;margin-bottom:2px}
 
 TRADES_CSV = os.path.join(DATA, 'trades.csv')
 
+def load_account_cash():
+    """读取可用资金。优先读同花顺完整API响应(position_latest.json)，
+    兼容旧的简化格式(account.json: {"cash": ...})"""
+    for fname, key_path in [
+        ('position_latest.json', ('ex_data', 'money_remain')),
+        ('account.json',         ('cash',)),
+    ]:
+        path = os.path.join(DATA, fname)
+        if not os.path.exists(path):
+            continue
+        try:
+            data = json.load(open(path))
+            for k in key_path:
+                data = data[k]
+            return float(data)
+        except Exception:
+            continue
+    return None
+
 def load_trades():
     if not os.path.exists(TRADES_CSV):
         return pd.DataFrame(columns=['date','stock','action','shares','price','note'])
@@ -701,14 +720,7 @@ def generate():
     trade_stat = calc_trade_stats(trades)
 
     # ── 账户总览 ──
-    import json as _json
-    acct_path = os.path.join(DATA, 'account.json')
-    cash = None
-    if os.path.exists(acct_path):
-        try:
-            cash = _json.load(open(acct_path)).get('cash')
-        except Exception:
-            pass
+    cash = load_account_cash()
     market_val = sum(signals[n]['last_close'] * STOCKS[n]['hold'] for n in signals)
     total_cost  = sum(STOCKS[n]['cost'] * STOCKS[n]['hold'] for n in signals if STOCKS[n]['cost'] > 0)
     total_assets = market_val + (cash or 0)
