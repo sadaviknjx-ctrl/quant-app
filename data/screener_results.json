@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-02 06:55",
+  "generated_at": "2026-07-02 06:57",
   "results": [
     {
       "code": "000100",
       "name": "TCL科技",
-      "price": 5.9,
-      "amount_wan": 1408368,
+      "price": 5.93,
+      "amount_wan": 1426464,
       "avg_range": 5.67,
       "ma5": 5.59,
       "ma10": 5.28,
@@ -18,14 +18,14 @@
         "RPS强势"
       ],
       "rps": 86.4,
-      "entry_price": 5.9,
+      "entry_price": 5.93,
       "entry_reason": "突破型信号，建议现价附近顺势介入，不必等回调"
     },
     {
       "code": "000783",
       "name": "长江证券",
-      "price": 10.02,
-      "amount_wan": 303447,
+      "price": 10.04,
+      "amount_wan": 307728,
       "avg_range": 5.53,
       "ma5": 9.93,
       "ma10": 9.28,
@@ -38,34 +38,14 @@
         "均线放量"
       ],
       "rps": 81.9,
-      "entry_price": 10.02,
-      "entry_reason": "突破型信号，建议现价附近顺势介入，不必等回调"
-    },
-    {
-      "code": "000629",
-      "name": "钒钛股份",
-      "price": 3.46,
-      "amount_wan": 115582,
-      "avg_range": 5.12,
-      "ma5": 3.32,
-      "ma10": 3.3,
-      "ma20": 3.26,
-      "vol_ratio": 1.57,
-      "score": 125,
-      "trend": "↑",
-      "signals": [
-        "海龟突破",
-        "均线放量"
-      ],
-      "rps": 65.7,
-      "entry_price": 3.46,
+      "entry_price": 10.04,
       "entry_reason": "突破型信号，建议现价附近顺势介入，不必等回调"
     },
     {
       "code": "002559",
       "name": "亚威股份",
       "price": 15.38,
-      "amount_wan": 111430,
+      "amount_wan": 128395,
       "avg_range": 5.93,
       "ma5": 12.64,
       "ma10": 11.66,
@@ -82,10 +62,30 @@
       "entry_reason": "强势股，建议等回踩MA5（12.64）再介入，避免追高"
     },
     {
+      "code": "000629",
+      "name": "钒钛股份",
+      "price": 3.44,
+      "amount_wan": 117545,
+      "avg_range": 5.12,
+      "ma5": 3.32,
+      "ma10": 3.3,
+      "ma20": 3.26,
+      "vol_ratio": 1.57,
+      "score": 125,
+      "trend": "↑",
+      "signals": [
+        "海龟突破",
+        "均线放量"
+      ],
+      "rps": 65.7,
+      "entry_price": 3.44,
+      "entry_reason": "突破型信号，建议现价附近顺势介入，不必等回调"
+    },
+    {
       "code": "000925",
       "name": "众合科技",
       "price": 10.19,
-      "amount_wan": 108935,
+      "amount_wan": 110348,
       "avg_range": 5.96,
       "ma5": 9.5,
       "ma10": 8.98,
@@ -104,8 +104,8 @@
     {
       "code": "601108",
       "name": "财通证券",
-      "price": 8.9,
-      "amount_wan": 96220,
+      "price": 8.92,
+      "amount_wan": 99279,
       "avg_range": 4.27,
       "ma5": 8.7,
       "ma10": 8.41,
@@ -118,14 +118,14 @@
         "均线放量"
       ],
       "rps": 58.2,
-      "entry_price": 8.9,
+      "entry_price": 8.92,
       "entry_reason": "突破型信号，建议现价附近顺势介入，不必等回调"
     },
     {
       "code": "600877",
       "name": "电科芯片",
-      "price": 16.85,
-      "amount_wan": 90740,
+      "price": 16.92,
+      "amount_wan": 92259,
       "avg_range": 5.35,
       "ma5": 16.81,
       "ma10": 15.71,
@@ -138,14 +138,14 @@
         "均线放量"
       ],
       "rps": 56.0,
-      "entry_price": 16.85,
+      "entry_price": 16.92,
       "entry_reason": "突破型信号，建议现价附近顺势介入，不必等回调"
     },
     {
       "code": "000422",
       "name": "湖北宜化",
-      "price": 14.76,
-      "amount_wan": 86414,
+      "price": 14.78,
+      "amount_wan": 87468,
       "avg_range": 4.64,
       "ma5": 14.06,
       "ma10": 13.9,
@@ -158,14 +158,14 @@
         "均线放量"
       ],
       "rps": 56.5,
-      "entry_price": 14.76,
+      "entry_price": 14.78,
       "entry_reason": "突破型信号，建议现价附近顺势介入，不必等回调"
     },
     {
       "code": "603456",
       "name": "九洲药业",
-      "price": 14.45,
-      "amount_wan": 63049,
+      "price": 14.5,
+      "amount_wan": 65032,
       "avg_range": 3.44,
       "ma5": 13.41,
       "ma10": 13.26,
@@ -178,14 +178,14 @@
         "均线放量"
       ],
       "rps": 17.8,
-      "entry_price": 14.45,
+      "entry_price": 14.5,
       "entry_reason": "突破型信号，建议现价附近顺势介入，不必等回调"
     },
     {
       "code": "002038",
       "name": "双鹭药业",
-      "price": 6.65,
-      "amount_wan": 59440,
+      "price": 6.69,
+      "amount_wan": 61150,
       "avg_range": 6.0,
       "ma5": 5.65,
       "ma10": 5.47,
@@ -198,14 +198,14 @@
         "均线放量"
       ],
       "rps": 23.4,
-      "entry_price": 6.65,
+      "entry_price": 6.69,
       "entry_reason": "突破型信号，建议现价附近顺势介入，不必等回调"
     },
     {
       "code": "002182",
       "name": "宝武镁业",
-      "price": 15.11,
-      "amount_wan": 56737,
+      "price": 15.12,
+      "amount_wan": 57630,
       "avg_range": 5.5,
       "ma5": 14.32,
       "ma10": 13.93,
@@ -218,14 +218,14 @@
         "均线放量"
       ],
       "rps": 55.2,
-      "entry_price": 15.11,
+      "entry_price": 15.12,
       "entry_reason": "突破型信号，建议现价附近顺势介入，不必等回调"
     },
     {
       "code": "601211",
       "name": "国泰海通",
-      "price": 19.16,
-      "amount_wan": 299589,
+      "price": 19.17,
+      "amount_wan": 303560,
       "avg_range": 3.64,
       "ma5": 18.12,
       "ma10": 17.76,
@@ -237,14 +237,14 @@
         "海龟突破"
       ],
       "rps": 44.0,
-      "entry_price": 19.16,
+      "entry_price": 19.17,
       "entry_reason": "突破型信号，建议现价附近顺势介入，不必等回调"
     },
     {
       "code": "300142",
       "name": "沃森生物",
-      "price": 12.97,
-      "amount_wan": 103138,
+      "price": 12.99,
+      "amount_wan": 104557,
       "avg_range": 4.74,
       "ma5": 12.62,
       "ma10": 12.44,
@@ -256,14 +256,14 @@
         "海龟突破"
       ],
       "rps": 71.9,
-      "entry_price": 12.97,
+      "entry_price": 12.99,
       "entry_reason": "突破型信号，建议现价附近顺势介入，不必等回调"
     },
     {
       "code": "002468",
       "name": "申通快递",
-      "price": 16.64,
-      "amount_wan": 98547,
+      "price": 16.61,
+      "amount_wan": 99744,
       "avg_range": 4.04,
       "ma5": 14.43,
       "ma10": 13.96,
@@ -275,14 +275,14 @@
         "海龟突破"
       ],
       "rps": 68.0,
-      "entry_price": 16.64,
+      "entry_price": 16.61,
       "entry_reason": "突破型信号，建议现价附近顺势介入，不必等回调"
     },
     {
       "code": "002698",
       "name": "博实股份",
       "price": 13.55,
-      "amount_wan": 57818,
+      "amount_wan": 58586,
       "avg_range": 5.2,
       "ma5": 12.06,
       "ma10": 11.83,
